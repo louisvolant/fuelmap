@@ -19,7 +19,9 @@ French government fuel-price open data.
 ## Features
 
 - 🗺️ **Full-screen map** — OpenFreeMap vector tiles, no API key, no cost.
-- ⛽ **Fuel filter** — Gazole, SP95, SP98, E10, E85, GPLc; single or multi-select.
+- 🌍 **France, Spain and Germany** — switch country from the settings; each
+  country brings its own fuel catalog and price source.
+- ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
 - 💶 **Prices on markers** — the selected fuel's price, shown from a given zoom.
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.
@@ -68,11 +70,14 @@ French government fuel-price open data.
 
 ### Phase 2 (planned)
 
-Other countries bordering France will be added behind a country registry:
-Belgium, Luxembourg, Germany, Switzerland, Italy, Spain, Andorra, Monaco.
-Pricing sources are national and heterogeneous (e.g. Tankerkoenig for Germany,
-`geoportalgasolineras` for Spain); where no pricing source exists, OpenStreetMap
-`amenity=fuel` can supply station locations.
+Germany and Spain are implemented. The remaining neighbours (Belgium,
+Luxembourg, Switzerland, Italy, Andorra, Monaco) will be added behind the same
+country registry. Italy has an official per-station API but no CORS headers, so
+it will reuse the Worker proxy. Belgium and Luxembourg only publish national
+**maximum** prices (not per-station), so they need an OSM-based fallback.
+
+Spain (`geoportalgasolineras`) and Germany (Tankerkönig) both border France and
+provide per-station prices.
 
 ## Getting started
 
@@ -149,18 +154,28 @@ README are in English. Add a language by dropping a folder under
 
 ## Deployment (Cloudflare)
 
-The app is a static SPA and deploys to **Cloudflare Pages**:
+The app deploys as a **Cloudflare Worker that also serves the SPA**:
 
-- **Build command:** `npm run build`
-- **Output directory:** `dist`
+- **Build command:** `npm run build` (outputs `dist/`)
+- **Deploy command:** `npx wrangler deploy`
 
-No backend is required for the MVP: the OpenDataSoft API sends permissive CORS
-headers, so the browser queries it directly. A `wrangler.toml` is committed with
-**`keep_vars = true`** so that, if a Cloudflare Worker is added later (edge caching,
-server-side aggregation, or a proxy for non-CORS sources), dashboard environment
-variables are preserved across deploys.
+`worker/index.ts` does two things:
 
-SPA routing is handled by `public/_redirects`.
+1. serves the built assets from `dist/` (with SPA fallback), and
+2. exposes `GET /api/de/stations` — a proxy in front of Tankerkönig so the
+   German API key stays server-side and never ships to the browser.
+
+Set the key once as a Worker secret:
+
+```bash
+npx wrangler secret put TANKERKOENIG_API_KEY
+```
+
+`wrangler.toml` sets **`keep_vars = true`** so environment variables configured
+in the dashboard survive every deploy.
+
+France and Spain need no backend: their APIs send permissive CORS headers and
+are queried directly by the browser.
 
 ## Attribution & license
 
