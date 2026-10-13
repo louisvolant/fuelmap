@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "FuelMap",
+    "tagline": "Знайдіть найдешевше пальне поблизу"
+  },
+  "common": {
+    "close": "Закрити",
+    "cancel": "Скасувати",
+    "confirm": "Підтвердити",
+    "loading": "Завантаження…",
+    "retry": "Повторити",
+    "settings": "Налаштування",
+    "language": "Мова"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "theme": "Тема",
+    "themeLight": "Світла",
+    "themeDark": "Темна",
+    "themeSystem": "Системна"
+  },
+  "errors": {
+    "generic": "Сталася помилка",
+    "offline": "Ви офлайн"
+  }
+}

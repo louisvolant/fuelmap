@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "FuelMap",
+    "tagline": "Encontre o combustível mais barato perto de si"
+  },
+  "common": {
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "A carregar…",
+    "retry": "Tentar novamente",
+    "settings": "Definições",
+    "language": "Idioma"
+  },
+  "settings": {
+    "title": "Definições",
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "themeSystem": "Sistema"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro",
+    "offline": "Está offline"
+  }
+}

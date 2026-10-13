@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "FuelMap",
+    "tagline": "Vind de goedkoopste brandstof bij jou in de buurt"
+  },
+  "common": {
+    "close": "Sluiten",
+    "cancel": "Annuleren",
+    "confirm": "Bevestigen",
+    "loading": "Laden…",
+    "retry": "Opnieuw proberen",
+    "settings": "Instellingen",
+    "language": "Taal"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "theme": "Thema",
+    "themeLight": "Licht",
+    "themeDark": "Donker",
+    "themeSystem": "Systeem"
+  },
+  "errors": {
+    "generic": "Er is een fout opgetreden",
+    "offline": "Je bent offline"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "FuelMap",
+    "tagline": "Trova il carburante più economico vicino a te"
+  },
+  "common": {
+    "close": "Chiudi",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "loading": "Caricamento…",
+    "retry": "Riprova",
+    "settings": "Impostazioni",
+    "language": "Lingua"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "theme": "Tema",
+    "themeLight": "Chiaro",
+    "themeDark": "Scuro",
+    "themeSystem": "Sistema"
+  },
+  "errors": {
+    "generic": "Si è verificato un errore",
+    "offline": "Sei offline"
+  }
+}

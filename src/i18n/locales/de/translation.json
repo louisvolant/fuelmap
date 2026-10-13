@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "FuelMap",
+    "tagline": "Finden Sie den günstigsten Kraftstoff in Ihrer Nähe"
+  },
+  "common": {
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "loading": "Wird geladen…",
+    "retry": "Erneut versuchen",
+    "settings": "Einstellungen",
+    "language": "Sprache"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "theme": "Design",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System"
+  },
+  "errors": {
+    "generic": "Ein Fehler ist aufgetreten",
+    "offline": "Sie sind offline"
+  }
+}

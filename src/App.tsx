@@ -1,12 +1,16 @@
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+
 export default function App() {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex h-dvh w-screen items-center justify-center bg-slate-900 text-slate-100">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">FuelMap</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          Full-screen fuel station map
-        </p>
-      </div>
+    <div className="flex h-dvh w-screen flex-col items-center justify-center gap-4 bg-slate-900 text-slate-100">
+      <h1 className="text-3xl font-bold tracking-tight">{t("app.name")}</h1>
+      <p className="max-w-xs text-center text-sm text-slate-400">
+        {t("app.tagline")}
+      </p>
+      <LanguageSwitcher />
     </div>
   );
 }
