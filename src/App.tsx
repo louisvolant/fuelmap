@@ -5,6 +5,8 @@ import { FavoritesSheet } from "@/components/favorites/FavoritesSheet";
 import { FilterSheet } from "@/components/filters/FilterSheet";
 import { FiltersButton } from "@/components/filters/FiltersButton";
 import { FuelFilterBar } from "@/components/filters/FuelFilterBar";
+import { ListButton } from "@/components/list/ListButton";
+import { StationListSheet } from "@/components/list/StationListSheet";
 import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
@@ -24,6 +26,7 @@ import { useCountryStations } from "@/hooks/useCountryStations";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
+import { sortStations } from "@/lib/sortStations";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
@@ -49,6 +52,7 @@ export default function App() {
   });
 
   const activeFuelId = useActiveFuelId();
+  const sortBy = useFilterStore((state) => state.sortBy);
   const selectStation = useUiStore((state) => state.selectStation);
   const selectedStationId = useUiStore((state) => state.selectedStationId);
   const openSheet = useUiStore((state) => state.openSheet);
@@ -107,6 +111,16 @@ export default function App() {
 
   const allServices = useMemo(() => collectServices(stations), [stations]);
 
+  const listStations = useMemo(
+    () =>
+      sortStations(filteredStations, {
+        sortBy,
+        fuelId: activeFuelId,
+        center: userPosition ?? undefined,
+      }),
+    [filteredStations, sortBy, activeFuelId, userPosition],
+  );
+
   const selectedStation = useMemo(
     () => stations.find((station) => station.id === selectedStationId) ?? null,
     [stations, selectedStationId],
@@ -144,7 +158,8 @@ export default function App() {
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-2 p-3">
           <FuelFilterBar />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <ListButton />
             <FiltersButton />
             <FavoritesButton />
             <StationsStatus
@@ -165,6 +180,16 @@ export default function App() {
           open={openSheet === "filters"}
           onClose={() => setOpenSheet(null)}
           services={allServices}
+        />
+
+        <StationListSheet
+          open={openSheet === "list"}
+          onClose={() => setOpenSheet(null)}
+          stations={listStations}
+          country={country}
+          activeFuelId={activeFuelId}
+          center={userPosition ?? undefined}
+          onSelect={(id) => selectStation(id)}
         />
 
         <FavoritesSheet

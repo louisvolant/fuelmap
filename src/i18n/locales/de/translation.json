@@ -33,6 +33,13 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Karten"
   },
+  "list": {
+    "title": "Liste",
+    "sortBy": "Sortieren nach",
+    "sortPrice": "Preis",
+    "sortDistance": "Entfernung",
+    "empty": "Keine Tankstellen"
+  },
   "station": {
     "title": "Tankstelle",
     "fuels": "Kraftstoffe",

@@ -33,6 +33,13 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas de Apple"
   },
+  "list": {
+    "title": "Lista",
+    "sortBy": "Ordenar por",
+    "sortPrice": "Precio",
+    "sortDistance": "Distancia",
+    "empty": "No hay gasolineras"
+  },
   "station": {
     "title": "Gasolinera",
     "fuels": "Combustibles",

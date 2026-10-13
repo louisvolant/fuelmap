@@ -33,6 +33,13 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Карти Apple"
   },
+  "list": {
+    "title": "Список",
+    "sortBy": "Сортувати за",
+    "sortPrice": "Ціна",
+    "sortDistance": "Відстань",
+    "empty": "Немає АЗС для показу"
+  },
   "station": {
     "title": "АЗС",
     "fuels": "Пальне",

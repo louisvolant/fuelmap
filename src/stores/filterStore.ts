@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { StationSort } from "@/lib/sortStations";
 
 interface FilterState {
   /**
@@ -15,12 +16,15 @@ interface FilterState {
   services: string[];
   /** Maximum distance from the user, in meters. `null` disables the radius. */
   maxDistanceMeters: number | null;
+  /** Sort order used by the list view. */
+  sortBy: StationSort;
 
   toggleFuel: (fuelId: string) => void;
   toggleService: (service: string) => void;
   setHideShortages: (value: boolean) => void;
   setOnly24h: (value: boolean) => void;
   setMaxDistance: (value: number | null) => void;
+  setSortBy: (value: StationSort) => void;
   clearFuels: () => void;
   reset: () => void;
 }
@@ -33,6 +37,7 @@ export const useFilterStore = create<FilterState>()(
       only24h: false,
       services: [],
       maxDistanceMeters: null,
+      sortBy: "price",
 
       toggleFuel: (fuelId) =>
         set((state) => ({
@@ -49,6 +54,7 @@ export const useFilterStore = create<FilterState>()(
       setHideShortages: (hideShortages) => set({ hideShortages }),
       setOnly24h: (only24h) => set({ only24h }),
       setMaxDistance: (maxDistanceMeters) => set({ maxDistanceMeters }),
+      setSortBy: (sortBy) => set({ sortBy }),
       clearFuels: () => set({ selectedFuelIds: [] }),
       reset: () =>
         set({

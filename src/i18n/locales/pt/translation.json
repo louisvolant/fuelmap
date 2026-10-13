@@ -33,6 +33,13 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas Apple"
   },
+  "list": {
+    "title": "Lista",
+    "sortBy": "Ordenar por",
+    "sortPrice": "Preço",
+    "sortDistance": "Distância",
+    "empty": "Sem postos"
+  },
   "station": {
     "title": "Posto",
     "fuels": "Combustíveis",

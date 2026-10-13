@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 /** Modal sheets that can be opened from the map. */
-export type SheetId = "filters" | "favorites" | "settings";
+export type SheetId = "filters" | "favorites" | "settings" | "list";
 
 interface UiState {
   /** Currently selected station id, or `null`. Drives the detail sheet. */
