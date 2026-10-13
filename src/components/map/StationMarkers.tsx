@@ -65,90 +65,93 @@ export function StationMarkers({
     };
 
     const ensureLayers = () => {
-      if (!map.isStyleLoaded()) return;
+      try {
+        if (!map.getSource(SOURCE_ID)) {
+          map.addSource(SOURCE_ID, {
+            type: "geojson",
+            data: dataRef.current,
+            cluster: true,
+            clusterRadius: 50,
+            clusterMaxZoom: 13,
+          });
+        }
 
-      if (!map.getSource(SOURCE_ID)) {
-        map.addSource(SOURCE_ID, {
-          type: "geojson",
-          data: dataRef.current,
-          cluster: true,
-          clusterRadius: 50,
-          clusterMaxZoom: 13,
-        });
+        if (!map.getLayer(CLUSTER_LAYER)) {
+          map.addLayer({
+            id: CLUSTER_LAYER,
+            type: "circle",
+            source: SOURCE_ID,
+            filter: ["has", "point_count"],
+            paint: {
+              "circle-color": "#0ea5e9",
+              "circle-opacity": 0.85,
+              "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 50, 26],
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#ffffff",
+            },
+          });
+        }
+
+        if (!map.getLayer(CLUSTER_COUNT_LAYER)) {
+          map.addLayer({
+            id: CLUSTER_COUNT_LAYER,
+            type: "symbol",
+            source: SOURCE_ID,
+            filter: ["has", "point_count"],
+            layout: {
+              "text-field": ["get", "point_count_abbreviated"],
+              "text-size": 12,
+              "text-allow-overlap": true,
+            },
+            paint: { "text-color": "#ffffff" },
+          });
+        }
+
+        if (!map.getLayer(POINT_LAYER)) {
+          map.addLayer({
+            id: POINT_LAYER,
+            type: "circle",
+            source: SOURCE_ID,
+            filter: ["!", ["has", "point_count"]],
+            paint: {
+              "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
+              "circle-radius": 13,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
+            },
+          });
+        }
+
+        if (!map.getLayer(LABEL_LAYER)) {
+          map.addLayer({
+            id: LABEL_LAYER,
+            type: "symbol",
+            source: SOURCE_ID,
+            minzoom: PRICE_LABEL_MIN_ZOOM,
+            filter: [
+              "all",
+              ["!", ["has", "point_count"]],
+              ["==", ["get", "hasPrice"], true],
+            ],
+            layout: {
+              "text-field": ["get", "priceLabel"],
+              "text-size": 10,
+              "text-allow-overlap": true,
+            },
+            paint: { "text-color": "#0f172a" },
+          });
+        }
+
+        applyData();
+      } catch {
+        // Style not ready yet: retry on the next `styledata` / `idle` event.
       }
-
-      if (!map.getLayer(CLUSTER_LAYER)) {
-        map.addLayer({
-          id: CLUSTER_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": "#0ea5e9",
-            "circle-opacity": 0.85,
-            "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 50, 26],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-      }
-
-      if (!map.getLayer(CLUSTER_COUNT_LAYER)) {
-        map.addLayer({
-          id: CLUSTER_COUNT_LAYER,
-          type: "symbol",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": ["get", "point_count_abbreviated"],
-            "text-size": 12,
-            "text-allow-overlap": true,
-          },
-          paint: { "text-color": "#ffffff" },
-        });
-      }
-
-      if (!map.getLayer(POINT_LAYER)) {
-        map.addLayer({
-          id: POINT_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
-            "circle-radius": 13,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
-          },
-        });
-      }
-
-      if (!map.getLayer(LABEL_LAYER)) {
-        map.addLayer({
-          id: LABEL_LAYER,
-          type: "symbol",
-          source: SOURCE_ID,
-          minzoom: PRICE_LABEL_MIN_ZOOM,
-          filter: [
-            "all",
-            ["!", ["has", "point_count"]],
-            ["==", ["get", "hasPrice"], true],
-          ],
-          layout: {
-            "text-field": ["get", "priceLabel"],
-            "text-size": 10,
-            "text-allow-overlap": true,
-          },
-          paint: { "text-color": "#0f172a" },
-        });
-      }
-
-      applyData();
     };
 
     ensureLayers();
     map.on("load", ensureLayers);
     map.on("styledata", ensureLayers);
+    map.on("idle", ensureLayers);
 
     const handleClusterClick = (event: MapLayerMouseEvent) => {
       const feature = map.queryRenderedFeatures(event.point, {
@@ -188,6 +191,7 @@ export function StationMarkers({
     return () => {
       map.off("load", ensureLayers);
       map.off("styledata", ensureLayers);
+      map.off("idle", ensureLayers);
       map.off("click", CLUSTER_LAYER, handleClusterClick);
       map.off("click", POINT_LAYER, handlePointClick);
       map.off("mouseenter", CLUSTER_LAYER, setPointer);

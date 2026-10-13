@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Kaarten"
   },
+  "route": {
+    "title": "Route",
+    "chooseDestination": "Tik op de kaart om de bestemming te kiezen",
+    "needLocation": "Locatie activeren om de route te berekenen",
+    "onlyOnRoute": "Tankstations op de route",
+    "clear": "Wissen",
+    "loading": "Route wordt berekend…",
+    "error": "Route niet beschikbaar"
+  },
   "list": {
     "title": "Lijst",
     "sortBy": "Sorteren op",

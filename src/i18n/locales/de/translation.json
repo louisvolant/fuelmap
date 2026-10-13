@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Karten"
   },
+  "route": {
+    "title": "Route",
+    "chooseDestination": "Tippen Sie auf die Karte, um das Ziel zu wählen",
+    "needLocation": "Standort aktivieren, um die Route zu berechnen",
+    "onlyOnRoute": "Tankstellen auf der Route",
+    "clear": "Löschen",
+    "loading": "Route wird berechnet…",
+    "error": "Route nicht verfügbar"
+  },
   "list": {
     "title": "Liste",
     "sortBy": "Sortieren nach",

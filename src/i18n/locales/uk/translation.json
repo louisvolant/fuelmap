@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Карти Apple"
   },
+  "route": {
+    "title": "Маршрут",
+    "chooseDestination": "Торкніться карти, щоб вибрати пункт призначення",
+    "needLocation": "Увімкніть геолокацію, щоб прокласти маршрут",
+    "onlyOnRoute": "АЗС на маршруті",
+    "clear": "Очистити",
+    "loading": "Обчислення маршруту…",
+    "error": "Маршрут недоступний"
+  },
   "list": {
     "title": "Список",
     "sortBy": "Сортувати за",

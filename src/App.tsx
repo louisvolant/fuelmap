@@ -13,6 +13,9 @@ import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
+import { RouteButton } from "@/components/route/RouteButton";
+import { RouteLayer } from "@/components/route/RouteLayer";
+import { RoutePanel } from "@/components/route/RoutePanel";
 import { SettingsButton } from "@/components/settings/SettingsButton";
 import { SettingsSheet } from "@/components/settings/SettingsSheet";
 import { StationSheet } from "@/components/station/StationSheet";
@@ -26,12 +29,17 @@ import { useCountryStations } from "@/hooks/useCountryStations";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
+import { stationsAlongRoute } from "@/lib/routeStations";
 import { sortStations } from "@/lib/sortStations";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
 import { useGeolocationStore } from "@/stores/geolocationStore";
+import { useRouteStore } from "@/stores/routeStore";
 import { useUiStore } from "@/stores/uiStore";
+
+/** Stations within this distance (meters) of the route are kept. */
+const ROUTE_CORRIDOR_METERS = 2000;
 
 export default function App() {
   const countryCode = useCountryStore((state) => state.country);
@@ -53,6 +61,8 @@ export default function App() {
 
   const activeFuelId = useActiveFuelId();
   const sortBy = useFilterStore((state) => state.sortBy);
+  const route = useRouteStore((state) => state.route);
+  const onlyOnRoute = useRouteStore((state) => state.onlyOnRoute);
   const selectStation = useUiStore((state) => state.selectStation);
   const selectedStationId = useUiStore((state) => state.selectedStationId);
   const openSheet = useUiStore((state) => state.openSheet);
@@ -111,14 +121,24 @@ export default function App() {
 
   const allServices = useMemo(() => collectServices(stations), [stations]);
 
+  // Restrict to the route corridor when the route filter is enabled.
+  const visibleStations = useMemo(() => {
+    if (!route || !onlyOnRoute) return filteredStations;
+    return stationsAlongRoute(
+      filteredStations,
+      route.coordinates,
+      ROUTE_CORRIDOR_METERS,
+    );
+  }, [filteredStations, route, onlyOnRoute]);
+
   const listStations = useMemo(
     () =>
-      sortStations(filteredStations, {
+      sortStations(visibleStations, {
         sortBy,
         fuelId: activeFuelId,
         center: userPosition ?? undefined,
       }),
-    [filteredStations, sortBy, activeFuelId, userPosition],
+    [visibleStations, sortBy, activeFuelId, userPosition],
   );
 
   const selectedStation = useMemo(
@@ -148,13 +168,14 @@ export default function App() {
         />
 
         <StationMarkers
-          stations={filteredStations}
+          stations={visibleStations}
           activeFuelId={activeFuelId}
           favoriteIds={favoriteIds}
           onSelect={(id) => selectStation(id)}
         />
 
         <UserLocationLayer />
+        <RouteLayer />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-2 p-3">
           <FuelFilterBar />
@@ -162,14 +183,16 @@ export default function App() {
             <ListButton />
             <FiltersButton />
             <FavoritesButton />
+            <RouteButton />
             <StationsStatus
-              count={filteredStations.length}
+              count={visibleStations.length}
               isLoading={isLoading}
               isError={isError}
               onRetry={refetch}
             />
             <SettingsButton />
           </div>
+          <RoutePanel />
         </div>
 
         <div className="pointer-events-none absolute right-3 bottom-24 z-20 flex flex-col items-center gap-2">

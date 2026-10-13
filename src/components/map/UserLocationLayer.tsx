@@ -39,51 +39,55 @@ export function UserLocationLayer() {
     if (!map) return;
 
     const ensureLayers = () => {
-      if (!map.isStyleLoaded()) return;
-
-      if (!map.getSource(SOURCE_ID)) {
-        map.addSource(SOURCE_ID, {
-          type: "geojson",
-          data: dataRef.current,
-        });
+      try {
+        if (!map.getSource(SOURCE_ID)) {
+          map.addSource(SOURCE_ID, {
+            type: "geojson",
+            data: dataRef.current,
+          });
+        }
+        if (!map.getLayer(HALO_LAYER)) {
+          map.addLayer({
+            id: HALO_LAYER,
+            type: "circle",
+            source: SOURCE_ID,
+            paint: {
+              "circle-color": "#3b82f6",
+              "circle-opacity": 0.25,
+              "circle-radius": 16,
+            },
+          });
+        }
+        if (!map.getLayer(POINT_LAYER)) {
+          map.addLayer({
+            id: POINT_LAYER,
+            type: "circle",
+            source: SOURCE_ID,
+            paint: {
+              "circle-color": "#2563eb",
+              "circle-radius": 7,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#ffffff",
+            },
+          });
+        }
+        (map.getSource(SOURCE_ID) as GeoJSONSource | undefined)?.setData(
+          dataRef.current,
+        );
+      } catch {
+        // Style not ready yet: retry on the next `styledata` / `idle` event.
       }
-      if (!map.getLayer(HALO_LAYER)) {
-        map.addLayer({
-          id: HALO_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          paint: {
-            "circle-color": "#3b82f6",
-            "circle-opacity": 0.25,
-            "circle-radius": 16,
-          },
-        });
-      }
-      if (!map.getLayer(POINT_LAYER)) {
-        map.addLayer({
-          id: POINT_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          paint: {
-            "circle-color": "#2563eb",
-            "circle-radius": 7,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-      }
-      (map.getSource(SOURCE_ID) as GeoJSONSource | undefined)?.setData(
-        dataRef.current,
-      );
     };
 
     ensureLayers();
     map.on("load", ensureLayers);
     map.on("styledata", ensureLayers);
+    map.on("idle", ensureLayers);
 
     return () => {
       map.off("load", ensureLayers);
       map.off("styledata", ensureLayers);
+      map.off("idle", ensureLayers);
     };
   }, [map]);
 

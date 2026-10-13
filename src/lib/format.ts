@@ -26,3 +26,20 @@ export function formatDistance(meters: number, locale: string): string {
   const value = meters < 1000 ? meters : meters / 1000;
   return new Intl.NumberFormat(locale, options).format(value);
 }
+
+/** Format a duration in seconds as e.g. `1 h 12 min`. */
+export function formatDuration(seconds: number, locale: string): string {
+  const totalMinutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const format = (value: number, unit: "hour" | "minute") =>
+    new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit,
+      unitDisplay: "short",
+    }).format(value);
+
+  if (hours === 0) return format(minutes, "minute");
+  if (minutes === 0) return format(hours, "hour");
+  return `${format(hours, "hour")} ${format(minutes, "minute")}`;
+}

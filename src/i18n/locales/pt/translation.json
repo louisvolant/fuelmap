@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas Apple"
   },
+  "route": {
+    "title": "Rota",
+    "chooseDestination": "Toque no mapa para escolher o destino",
+    "needLocation": "Ative a sua localização para calcular a rota",
+    "onlyOnRoute": "Postos na rota",
+    "clear": "Limpar",
+    "loading": "A calcular a rota…",
+    "error": "Rota indisponível"
+  },
   "list": {
     "title": "Lista",
     "sortBy": "Ordenar por",

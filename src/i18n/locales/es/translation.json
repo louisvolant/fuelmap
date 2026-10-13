@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas de Apple"
   },
+  "route": {
+    "title": "Ruta",
+    "chooseDestination": "Toca el mapa para elegir el destino",
+    "needLocation": "Activa tu ubicación para calcular la ruta",
+    "onlyOnRoute": "Gasolineras en la ruta",
+    "clear": "Borrar",
+    "loading": "Calculando la ruta…",
+    "error": "Ruta no disponible"
+  },
   "list": {
     "title": "Lista",
     "sortBy": "Ordenar por",

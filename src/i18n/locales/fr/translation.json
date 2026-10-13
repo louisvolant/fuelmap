@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Plans"
   },
+  "route": {
+    "title": "Itinéraire",
+    "chooseDestination": "Touchez la carte pour choisir la destination",
+    "needLocation": "Activez votre position pour calculer l'itinéraire",
+    "onlyOnRoute": "Stations sur l'itinéraire",
+    "clear": "Effacer",
+    "loading": "Calcul de l'itinéraire…",
+    "error": "Itinéraire indisponible"
+  },
   "list": {
     "title": "Liste",
     "sortBy": "Trier par",

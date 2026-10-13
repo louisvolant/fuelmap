@@ -33,6 +33,15 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mappe Apple"
   },
+  "route": {
+    "title": "Percorso",
+    "chooseDestination": "Tocca la mappa per scegliere la destinazione",
+    "needLocation": "Attiva la posizione per calcolare il percorso",
+    "onlyOnRoute": "Distributori sul percorso",
+    "clear": "Cancella",
+    "loading": "Calcolo del percorso…",
+    "error": "Percorso non disponibile"
+  },
   "list": {
     "title": "Elenco",
     "sortBy": "Ordina per",
