@@ -43,13 +43,15 @@ export interface FuelShortage {
 export interface NormalizedFuelPrice {
   /** Matches a `FuelDefinition.id` from the owning country catalog. */
   fuelId: string;
-  /** Price per liter in the country's currency. */
-  price: number;
+  /** Price per liter in the country's currency. Absent when unavailable. */
+  price?: number;
   /** ISO 4217 code, e.g. `"EUR"`. */
   currency: string;
-  /** ISO 8601 timestamp of the last price update from the source. */
-  updatedAt: string;
+  /** ISO 8601 timestamp of the last price update. Absent when never priced. */
+  updatedAt?: string;
   shortage?: FuelShortage;
+  /** Whether the source currently lists this fuel as available. */
+  available: boolean;
 }
 
 export interface OpeningHoursPeriod {
