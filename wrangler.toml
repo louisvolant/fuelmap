@@ -1,0 +1,32 @@
+# Cloudflare configuration for FuelMap.
+#
+# The MVP is a static SPA deployed with Cloudflare Pages:
+#   build command:   npm run build
+#   output directory: dist
+#
+# No Worker is required for the MVP because the French fuel price API
+# (data.economie.gouv.fr, Opendatasoft) returns permissive CORS headers,
+# so the browser can query it directly.
+#
+# A Worker may be added later (edge caching, server-side aggregation of the
+# ~98 paginated requests, or proxying sources that lack CORS). When that
+# happens, keep this file and this project name.
+#
+# `keep_vars = true` makes sure environment variables configured in the
+# Cloudflare dashboard are preserved across deployments instead of being
+# wiped on every push. Never remove it.
+name = "fuelmap"
+compatibility_date = "2026-10-01"
+keep_vars = true
+
+# Environment variables are configured in the Cloudflare dashboard.
+# They are listed here (commented) only for documentation.
+#
+# [vars]
+# FUEL_API_BASE_URL = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2"
+# PUBLIC_APP_URL = "https://fuelmap.pages.dev"
+
+# Uncomment if a Worker starts serving the built assets directly.
+# [assets]
+# directory = "./dist"
+# binding = "ASSETS"
