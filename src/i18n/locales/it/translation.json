@@ -19,6 +19,11 @@
     "themeDark": "Scuro",
     "themeSystem": "Sistema"
   },
+  "map": {
+    "stations": "Distributori",
+    "loadingStations": "Caricamento distributori…",
+    "loadError": "Impossibile caricare i distributori"
+  },
   "fuels": {
     "gazole": "Gasolio",
     "sp95": "SP95",

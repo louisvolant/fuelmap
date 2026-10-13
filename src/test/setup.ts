@@ -2,6 +2,19 @@ import "fake-indexeddb/auto";
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 
+// Unit tests must never hit the network. Return an empty ODS page by default;
+// individual tests can override the mock when they need data.
+vi.stubGlobal(
+  "fetch",
+  vi.fn(
+    async () =>
+      new Response(JSON.stringify({ total_count: 0, results: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+  ),
+);
+
 // MapLibre GL requires WebGL, which jsdom does not implement. Provide a minimal
 // mock so components that embed the map can be rendered in unit tests.
 vi.mock("maplibre-gl", () => {

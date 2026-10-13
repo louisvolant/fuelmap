@@ -19,6 +19,11 @@
     "themeDark": "Sombre",
     "themeSystem": "Système"
   },
+  "map": {
+    "stations": "Stations",
+    "loadingStations": "Chargement des stations…",
+    "loadError": "Impossible de charger les stations"
+  },
   "fuels": {
     "gazole": "Gazole",
     "sp95": "SP95",

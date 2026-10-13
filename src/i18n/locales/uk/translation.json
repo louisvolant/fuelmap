@@ -19,6 +19,11 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "map": {
+    "stations": "АЗС",
+    "loadingStations": "Завантаження заправок…",
+    "loadError": "Не вдалося завантажити заправки"
+  },
   "fuels": {
     "gazole": "Дизель",
     "sp95": "SP95",

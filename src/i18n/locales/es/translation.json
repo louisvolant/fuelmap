@@ -19,6 +19,11 @@
     "themeDark": "Oscuro",
     "themeSystem": "Sistema"
   },
+  "map": {
+    "stations": "Gasolineras",
+    "loadingStations": "Cargando gasolineras…",
+    "loadError": "No se pudieron cargar las gasolineras"
+  },
   "fuels": {
     "gazole": "Diésel",
     "sp95": "SP95",

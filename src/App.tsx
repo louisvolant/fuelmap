@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
+import { StationsStatus } from "@/components/map/StationsStatus";
 import { getCountry } from "@/countries";
 import { DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
 import { useCountryStore } from "@/stores/countryStore";
@@ -21,6 +22,10 @@ export default function App() {
           onMapReady={setMap}
           className="absolute inset-0"
         />
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-3">
+          <StationsStatus />
+        </div>
       </div>
     </MapContext.Provider>
   );

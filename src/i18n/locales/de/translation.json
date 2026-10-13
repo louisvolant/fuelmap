@@ -19,6 +19,11 @@
     "themeDark": "Dunkel",
     "themeSystem": "System"
   },
+  "map": {
+    "stations": "Tankstellen",
+    "loadingStations": "Tankstellen werden geladen…",
+    "loadError": "Tankstellen konnten nicht geladen werden"
+  },
   "fuels": {
     "gazole": "Diesel",
     "sp95": "SP95",

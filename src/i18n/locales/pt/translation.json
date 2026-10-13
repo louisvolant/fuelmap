@@ -19,6 +19,11 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "map": {
+    "stations": "Postos",
+    "loadingStations": "A carregar os postos…",
+    "loadError": "Não foi possível carregar os postos"
+  },
   "fuels": {
     "gazole": "Gasóleo",
     "sp95": "SP95",
