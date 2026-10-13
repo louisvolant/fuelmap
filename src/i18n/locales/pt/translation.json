@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Combustível",
     "title": "Filtros",
-    "clear": "Repor"
+    "clear": "Repor",
+    "hideShortages": "Ocultar postos sem combustível",
+    "only24h": "Apenas bombas 24 h",
+    "services": "Serviços",
+    "noServices": "Sem serviços disponíveis"
   },
   "map": {
     "stations": "Postos",

@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
+import { FilterSheet } from "@/components/filters/FilterSheet";
+import { FiltersButton } from "@/components/filters/FiltersButton";
 import { FuelFilterBar } from "@/components/filters/FuelFilterBar";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
@@ -11,6 +13,7 @@ import {
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
 import { useStations } from "@/hooks/useStations";
+import { collectServices } from "@/lib/filters";
 import { DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
 import { useCountryStore } from "@/stores/countryStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -22,7 +25,14 @@ export default function App() {
   const filteredStations = useFilteredStations(stations ?? []);
   const activeFuelId = useActiveFuelId();
   const selectStation = useUiStore((state) => state.selectStation);
+  const openSheet = useUiStore((state) => state.openSheet);
+  const setOpenSheet = useUiStore((state) => state.setOpenSheet);
   const [map, setMap] = useState<MapLibreMap | null>(null);
+
+  const allServices = useMemo(
+    () => collectServices(stations ?? []),
+    [stations],
+  );
 
   return (
     <MapContext.Provider value={map}>
@@ -43,8 +53,17 @@ export default function App() {
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-2 p-3">
           <FuelFilterBar />
-          <StationsStatus count={filteredStations.length} />
+          <div className="flex items-center gap-2">
+            <FiltersButton />
+            <StationsStatus count={filteredStations.length} />
+          </div>
         </div>
+
+        <FilterSheet
+          open={openSheet === "filters"}
+          onClose={() => setOpenSheet(null)}
+          services={allServices}
+        />
       </div>
     </MapContext.Provider>
   );

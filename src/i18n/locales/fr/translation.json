@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Carburant",
     "title": "Filtres",
-    "clear": "Réinitialiser"
+    "clear": "Réinitialiser",
+    "hideShortages": "Masquer les stations en rupture",
+    "only24h": "Automate 24/24 uniquement",
+    "services": "Services",
+    "noServices": "Aucun service disponible"
   },
   "map": {
     "stations": "Stations",

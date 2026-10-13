@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Kraftstoff",
     "title": "Filter",
-    "clear": "Zurücksetzen"
+    "clear": "Zurücksetzen",
+    "hideShortages": "Tankstellen mit Engpässen ausblenden",
+    "only24h": "Nur 24/7-Automaten",
+    "services": "Services",
+    "noServices": "Keine Services verfügbar"
   },
   "map": {
     "stations": "Tankstellen",

@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Brandstof",
     "title": "Filters",
-    "clear": "Resetten"
+    "clear": "Resetten",
+    "hideShortages": "Tankstations met tekorten verbergen",
+    "only24h": "Alleen 24-uurs pompen",
+    "services": "Diensten",
+    "noServices": "Geen diensten beschikbaar"
   },
   "map": {
     "stations": "Tankstations",

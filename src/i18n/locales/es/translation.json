@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Combustible",
     "title": "Filtros",
-    "clear": "Restablecer"
+    "clear": "Restablecer",
+    "hideShortages": "Ocultar gasolineras sin suministro",
+    "only24h": "Solo surtidores 24 h",
+    "services": "Servicios",
+    "noServices": "No hay servicios disponibles"
   },
   "map": {
     "stations": "Gasolineras",

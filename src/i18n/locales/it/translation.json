@@ -22,7 +22,11 @@
   "filters": {
     "fuel": "Carburante",
     "title": "Filtri",
-    "clear": "Reimposta"
+    "clear": "Reimposta",
+    "hideShortages": "Nascondi i distributori senza carburante",
+    "only24h": "Solo self 24 h",
+    "services": "Servizi",
+    "noServices": "Nessun servizio disponibile"
   },
   "map": {
     "stations": "Distributori",
