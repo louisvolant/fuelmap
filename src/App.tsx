@@ -55,6 +55,18 @@ export default function App() {
     void loadFavorites();
   }, [loadFavorites]);
 
+  // Switching country changes the fuel catalog: clear the fuel selection so it
+  // does not reference fuels that do not exist in the new country.
+  useEffect(() => {
+    useFilterStore.getState().clearFuels();
+  }, [countryCode]);
+
+  // Move the camera to the newly selected country.
+  useEffect(() => {
+    if (!map) return;
+    map.flyTo({ center: country.center, zoom: country.zoom, duration: 800 });
+  }, [map, country, countryCode]);
+
   const allServices = useMemo(() => collectServices(stations ?? []), [stations]);
 
   const selectedStation = useMemo(

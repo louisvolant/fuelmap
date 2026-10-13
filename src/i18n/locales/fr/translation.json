@@ -1,4 +1,5 @@
 {
+  "countries": { "FR": "France", "DE": "Allemagne", "ES": "Espagne" },
   "app": {
     "name": "FuelMap",
     "tagline": "Trouvez le carburant le moins cher autour de vous"
@@ -17,7 +18,8 @@
     "theme": "Thème",
     "themeLight": "Clair",
     "themeDark": "Sombre",
-    "themeSystem": "Système"
+    "themeSystem": "Système",
+    "country": "Pays"
   },
   "favorites": {
     "title": "Favoris",
@@ -71,7 +73,13 @@
     "sp98": "SP98",
     "e10": "E10",
     "e85": "E85",
-    "gplc": "GPLc"
+    "gplc": "GPLc",
+    "gasoleoA": "Gazole",
+    "gasolina95": "Essence 95",
+    "gasolina98": "Essence 98",
+    "gasoleoPremium": "Gazole Premium",
+    "glp": "GPL",
+    "gnc": "GNC"
   },
   "errors": {
     "generic": "Une erreur est survenue",

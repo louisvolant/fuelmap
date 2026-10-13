@@ -26,7 +26,10 @@ describe("SettingsSheet", () => {
     const user = userEvent.setup();
     render(<SettingsSheet open onClose={() => {}} />);
 
-    await user.selectOptions(screen.getByRole("combobox"), "de");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Langue" }),
+      "de",
+    );
     expect(i18n.language).toBe("de");
     expect(screen.getByText("Einstellungen")).toBeInTheDocument();
   });

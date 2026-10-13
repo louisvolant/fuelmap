@@ -76,6 +76,9 @@ vi.mock("maplibre-gl", () => {
     easeTo() {
       return this;
     }
+    flyTo() {
+      return this;
+    }
     getCanvas() {
       return document.createElement("canvas");
     }

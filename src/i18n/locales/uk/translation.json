@@ -1,4 +1,5 @@
 {
+  "countries": { "FR": "Франція", "DE": "Німеччина", "ES": "Іспанія" },
   "app": {
     "name": "FuelMap",
     "tagline": "Знайдіть найдешевше пальне поблизу"
@@ -17,7 +18,8 @@
     "theme": "Тема",
     "themeLight": "Світла",
     "themeDark": "Темна",
-    "themeSystem": "Системна"
+    "themeSystem": "Системна",
+    "country": "Країна"
   },
   "favorites": {
     "title": "Обране",
@@ -71,7 +73,13 @@
     "sp98": "SP98",
     "e10": "E10",
     "e85": "E85",
-    "gplc": "GPLc"
+    "gplc": "GPLc",
+    "gasoleoA": "Дизель",
+    "gasolina95": "Бензин 95",
+    "gasolina98": "Бензин 98",
+    "gasoleoPremium": "Дизель преміум",
+    "glp": "Газ (LPG)",
+    "gnc": "Газ (CNG)"
   },
   "errors": {
     "generic": "Сталася помилка",

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Sheet } from "@/components/ui/Sheet";
+import { CountrySwitcher } from "./CountrySwitcher";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
@@ -8,13 +9,17 @@ interface SettingsSheetProps {
   onClose: () => void;
 }
 
-/** Settings sheet: theme and language. */
+/** Settings sheet: country, language and theme. */
 export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const { t } = useTranslation();
 
   return (
     <Sheet open={open} onClose={onClose} title={t("settings.title")}>
       <div className="flex flex-col gap-5">
+        <section>
+          <h3 className="mb-2 text-sm font-semibold">{t("settings.country")}</h3>
+          <CountrySwitcher />
+        </section>
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t("settings.theme")}</h3>
           <ThemeSwitcher />
