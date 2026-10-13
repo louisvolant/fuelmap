@@ -19,6 +19,11 @@
     "themeDark": "Dunkel",
     "themeSystem": "System"
   },
+  "filters": {
+    "fuel": "Kraftstoff",
+    "title": "Filter",
+    "clear": "Zurücksetzen"
+  },
   "map": {
     "stations": "Tankstellen",
     "loadingStations": "Tankstellen werden geladen…",

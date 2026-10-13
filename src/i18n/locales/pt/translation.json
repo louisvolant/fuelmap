@@ -19,6 +19,11 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "filters": {
+    "fuel": "Combustível",
+    "title": "Filtros",
+    "clear": "Repor"
+  },
   "map": {
     "stations": "Postos",
     "loadingStations": "A carregar os postos…",

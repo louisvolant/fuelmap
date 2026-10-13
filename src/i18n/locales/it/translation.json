@@ -19,6 +19,11 @@
     "themeDark": "Scuro",
     "themeSystem": "Sistema"
   },
+  "filters": {
+    "fuel": "Carburante",
+    "title": "Filtri",
+    "clear": "Reimposta"
+  },
   "map": {
     "stations": "Distributori",
     "loadingStations": "Caricamento distributori…",

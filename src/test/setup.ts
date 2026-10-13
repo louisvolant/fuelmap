@@ -1,6 +1,8 @@
 import "fake-indexeddb/auto";
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
+// Initialize i18n once for every test so components render translated copy.
+import "@/i18n";
 
 // Unit tests must never hit the network. Return an empty ODS page by default;
 // individual tests can override the mock when they need data.

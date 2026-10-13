@@ -19,6 +19,11 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "filters": {
+    "fuel": "Пальне",
+    "title": "Фільтри",
+    "clear": "Скинути"
+  },
   "map": {
     "stations": "АЗС",
     "loadingStations": "Завантаження заправок…",

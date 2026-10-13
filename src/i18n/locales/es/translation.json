@@ -19,6 +19,11 @@
     "themeDark": "Oscuro",
     "themeSystem": "Sistema"
   },
+  "filters": {
+    "fuel": "Combustible",
+    "title": "Filtros",
+    "clear": "Restablecer"
+  },
   "map": {
     "stations": "Gasolineras",
     "loadingStations": "Cargando gasolineras…",

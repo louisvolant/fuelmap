@@ -19,6 +19,11 @@
     "themeDark": "Sombre",
     "themeSystem": "Système"
   },
+  "filters": {
+    "fuel": "Carburant",
+    "title": "Filtres",
+    "clear": "Réinitialiser"
+  },
   "map": {
     "stations": "Stations",
     "loadingStations": "Chargement des stations…",
