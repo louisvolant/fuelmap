@@ -19,6 +19,12 @@
     "themeDark": "Donker",
     "themeSystem": "Systeem"
   },
+  "favorites": {
+    "title": "Favorieten",
+    "add": "Toevoegen aan favorieten",
+    "remove": "Verwijderen uit favorieten",
+    "empty": "Nog geen favorieten"
+  },
   "navigation": {
     "title": "Route",
     "waze": "Waze",

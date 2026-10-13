@@ -19,6 +19,12 @@
     "themeDark": "Scuro",
     "themeSystem": "Sistema"
   },
+  "favorites": {
+    "title": "Preferiti",
+    "add": "Aggiungi ai preferiti",
+    "remove": "Rimuovi dai preferiti",
+    "empty": "Nessun preferito"
+  },
   "navigation": {
     "title": "Percorso",
     "waze": "Waze",

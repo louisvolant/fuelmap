@@ -19,6 +19,12 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "favorites": {
+    "title": "Favoritos",
+    "add": "Adicionar aos favoritos",
+    "remove": "Remover dos favoritos",
+    "empty": "Ainda sem favoritos"
+  },
   "navigation": {
     "title": "Rota",
     "waze": "Waze",

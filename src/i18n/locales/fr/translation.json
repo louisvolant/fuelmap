@@ -19,6 +19,12 @@
     "themeDark": "Sombre",
     "themeSystem": "Système"
   },
+  "favorites": {
+    "title": "Favoris",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris",
+    "empty": "Aucun favori pour le moment"
+  },
   "navigation": {
     "title": "Itinéraire",
     "waze": "Waze",

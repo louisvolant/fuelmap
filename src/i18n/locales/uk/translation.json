@@ -19,6 +19,12 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "favorites": {
+    "title": "Обране",
+    "add": "Додати до обраного",
+    "remove": "Прибрати з обраного",
+    "empty": "Поки що немає обраного"
+  },
   "navigation": {
     "title": "Маршрут",
     "waze": "Waze",

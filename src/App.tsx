@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
+import { FavoritesButton } from "@/components/favorites/FavoritesButton";
+import { FavoritesSheet } from "@/components/favorites/FavoritesSheet";
 import { FilterSheet } from "@/components/filters/FilterSheet";
 import { FiltersButton } from "@/components/filters/FiltersButton";
 import { FuelFilterBar } from "@/components/filters/FuelFilterBar";
@@ -17,6 +19,7 @@ import { useStations } from "@/hooks/useStations";
 import { collectServices } from "@/lib/filters";
 import { DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
 import { useCountryStore } from "@/stores/countryStore";
+import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useUiStore } from "@/stores/uiStore";
 
 export default function App() {
@@ -29,7 +32,13 @@ export default function App() {
   const selectedStationId = useUiStore((state) => state.selectedStationId);
   const openSheet = useUiStore((state) => state.openSheet);
   const setOpenSheet = useUiStore((state) => state.setOpenSheet);
+  const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
+  const loadFavorites = useFavoritesStore((state) => state.load);
   const [map, setMap] = useState<MapLibreMap | null>(null);
+
+  useEffect(() => {
+    void loadFavorites();
+  }, [loadFavorites]);
 
   const allServices = useMemo(() => collectServices(stations ?? []), [stations]);
 
@@ -62,6 +71,7 @@ export default function App() {
         <StationMarkers
           stations={filteredStations}
           activeFuelId={activeFuelId}
+          favoriteIds={favoriteIds}
           onSelect={(id) => selectStation(id)}
         />
 
@@ -69,6 +79,7 @@ export default function App() {
           <FuelFilterBar />
           <div className="flex items-center gap-2">
             <FiltersButton />
+            <FavoritesButton />
             <StationsStatus count={filteredStations.length} />
           </div>
         </div>
@@ -77,6 +88,13 @@ export default function App() {
           open={openSheet === "filters"}
           onClose={() => setOpenSheet(null)}
           services={allServices}
+        />
+
+        <FavoritesSheet
+          open={openSheet === "favorites"}
+          onClose={() => setOpenSheet(null)}
+          stations={stations ?? []}
+          onSelect={(id) => selectStation(id)}
         />
 
         <StationSheet

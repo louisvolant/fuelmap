@@ -21,6 +21,8 @@ interface StationMarkersProps {
   stations: NormalizedStation[];
   /** Fuel whose price is shown on markers. `null` uses the cheapest fuel. */
   activeFuelId?: string | null;
+  /** Ids of favorite stations, highlighted on the map. */
+  favoriteIds?: readonly string[];
   onSelect?: (id: string) => void;
 }
 
@@ -33,6 +35,7 @@ interface StationMarkersProps {
 export function StationMarkers({
   stations,
   activeFuelId = null,
+  favoriteIds = [],
   onSelect,
 }: StationMarkersProps) {
   const map = useMap();
@@ -44,8 +47,8 @@ export function StationMarkers({
   }, [onSelect]);
 
   const data = useMemo(
-    () => stationsToFeatureCollection(stations, activeFuelId),
-    [stations, activeFuelId],
+    () => stationsToFeatureCollection(stations, activeFuelId, favoriteIds),
+    [stations, activeFuelId, favoriteIds],
   );
 
   useEffect(() => {
@@ -112,10 +115,10 @@ export function StationMarkers({
           source: SOURCE_ID,
           filter: ["!", ["has", "point_count"]],
           paint: {
-            "circle-color": "#ffffff",
+            "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
             "circle-radius": 13,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "#0f172a",
+            "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
           },
         });
       }

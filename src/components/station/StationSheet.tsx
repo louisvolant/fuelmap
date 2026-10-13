@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { CountryDefinition, NormalizedStation } from "@/countries/types";
 import { Sheet } from "@/components/ui/Sheet";
+import { FavoriteToggle } from "@/components/favorites/FavoriteToggle";
 import { formatDistance } from "@/lib/format";
 import { getFuel } from "@/lib/fuelCatalog";
 import { FuelPriceRow } from "./FuelPriceRow";
@@ -55,6 +56,9 @@ export function StationSheet({
             {distance !== undefined && (
               <span className={badgeClasses}>{formatDistance(distance, locale)}</span>
             )}
+          </div>
+          <div className="mt-3">
+            <FavoriteToggle stationId={station.id} country={station.country} />
           </div>
         </header>
 

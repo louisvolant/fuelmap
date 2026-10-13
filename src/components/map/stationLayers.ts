@@ -16,12 +16,15 @@ export interface StationFeatureProperties {
   id: string;
   priceLabel: string | null;
   hasPrice: boolean;
+  favorite: boolean;
 }
 
 export function stationsToFeatureCollection(
   stations: NormalizedStation[],
   activeFuelId: string | null,
+  favoriteIds: readonly string[] = [],
 ): FeatureCollection<Point, StationFeatureProperties> {
+  const favorites = new Set(favoriteIds);
   return {
     type: "FeatureCollection",
     features: stations.map((station): Feature<Point, StationFeatureProperties> => {
@@ -35,6 +38,7 @@ export function stationsToFeatureCollection(
           id: station.id,
           priceLabel: typeof price === "number" ? formatPriceCompact(price) : null,
           hasPrice: typeof price === "number",
+          favorite: favorites.has(station.id),
         },
       };
     }),
