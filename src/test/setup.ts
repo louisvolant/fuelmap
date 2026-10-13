@@ -71,6 +71,12 @@ vi.mock("maplibre-gl", () => {
     getLayer() {
       return undefined;
     }
+    hasImage() {
+      return false;
+    }
+    addImage() {
+      return this;
+    }
     isStyleLoaded() {
       return true;
     }

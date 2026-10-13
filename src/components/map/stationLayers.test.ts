@@ -36,4 +36,15 @@ describe("stationsToFeatureCollection", () => {
     expect(collection.features[0].properties?.hasPrice).toBe(false);
     expect(collection.features[0].properties?.priceLabel).toBeNull();
   });
+
+  it("resolves the brand image from the station brand", () => {
+    const branded: NormalizedStation = { ...station, brand: "Total Access" };
+    const collection = stationsToFeatureCollection([branded], null);
+    expect(collection.features[0].properties?.brandImage).toBe(
+      "brand-totalenergies",
+    );
+
+    const unbranded = stationsToFeatureCollection([station], null);
+    expect(unbranded.features[0].properties?.brandImage).toBe("");
+  });
 });

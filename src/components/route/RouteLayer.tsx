@@ -94,7 +94,7 @@ export function RouteLayer() {
     const onClick = (event: MapMouseEvent) => {
       if (!pickingRef.current) return;
       const hitStation = map.queryRenderedFeatures(event.point, {
-        layers: ["station-points", "station-clusters"],
+        layers: ["station-points", "station-clusters", "station-brands"],
       });
       if (hitStation.length > 0) return;
       useRouteStore

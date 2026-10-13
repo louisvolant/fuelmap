@@ -17,7 +17,7 @@ export const ES_STATIONS_FIXTURE = [
   },
   {
     IDEESS: "1002",
-    Rótulo: "CEPSA",
+    Rótulo: "Carrefour",
     Dirección: "CALLE ALCALA, 50",
     "C.P.": "28002",
     Municipio: "Madrid",

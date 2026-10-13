@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, Point } from "geojson";
 import type { NormalizedStation } from "@/countries/types";
+import { brandImageId, matchBrand } from "@/lib/brands";
 import { displayFuel } from "@/lib/stationUtils";
 import { formatPriceCompact } from "@/lib/format";
 
@@ -7,6 +8,7 @@ const SOURCE_ID = "stations";
 const CLUSTER_LAYER = "station-clusters";
 const CLUSTER_COUNT_LAYER = "station-cluster-count";
 const POINT_LAYER = "station-points";
+const BRAND_LAYER = "station-brands";
 const LABEL_LAYER = "station-price-labels";
 
 /** Zoom level from which individual prices are shown instead of clusters. */
@@ -17,6 +19,8 @@ export interface StationFeatureProperties {
   priceLabel: string | null;
   hasPrice: boolean;
   favorite: boolean;
+  /** MapLibre image id of the brand mark, or `""` when unknown. */
+  brandImage: string;
 }
 
 export function stationsToFeatureCollection(
@@ -30,6 +34,7 @@ export function stationsToFeatureCollection(
     features: stations.map((station): Feature<Point, StationFeatureProperties> => {
       const fuel = displayFuel(station, activeFuelId);
       const price = fuel?.price;
+      const brand = matchBrand(station.brand);
       return {
         type: "Feature",
         id: station.id,
@@ -39,6 +44,7 @@ export function stationsToFeatureCollection(
           priceLabel: typeof price === "number" ? formatPriceCompact(price) : null,
           hasPrice: typeof price === "number",
           favorite: favorites.has(station.id),
+          brandImage: brand ? brandImageId(brand) : "",
         },
       };
     }),
@@ -51,5 +57,6 @@ export const STATION_LAYERS = {
   CLUSTER_LAYER,
   CLUSTER_COUNT_LAYER,
   POINT_LAYER,
+  BRAND_LAYER,
   LABEL_LAYER,
 } as const;

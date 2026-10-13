@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import type { FeatureCollection, Point } from "geojson";
 import type { GeoJSONSource, MapLayerMouseEvent } from "maplibre-gl";
 import type { NormalizedStation } from "@/countries/types";
+import { ensureBrandImages } from "@/lib/brandImages";
+import { matchBrand, type BrandId } from "@/lib/brands";
 import { useMap } from "./MapContext";
 import {
   PRICE_LABEL_MIN_ZOOM,
@@ -9,7 +11,7 @@ import {
   stationsToFeatureCollection,
 } from "./stationLayers";
 
-const { SOURCE_ID, CLUSTER_LAYER, CLUSTER_COUNT_LAYER, POINT_LAYER, LABEL_LAYER } =
+const { SOURCE_ID, CLUSTER_LAYER, CLUSTER_COUNT_LAYER, POINT_LAYER, BRAND_LAYER, LABEL_LAYER } =
   STATION_LAYERS;
 
 const EMPTY_COLLECTION: FeatureCollection = {
@@ -50,6 +52,17 @@ export function StationMarkers({
     () => stationsToFeatureCollection(stations, activeFuelId, favoriteIds),
     [stations, activeFuelId, favoriteIds],
   );
+
+  // Register the SVG marks of the brands currently displayed.
+  useEffect(() => {
+    if (!map) return;
+    const ids = new Set<BrandId>();
+    for (const station of stations) {
+      const id = matchBrand(station.brand);
+      if (id) ids.add(id);
+    }
+    if (ids.size > 0) void ensureBrandImages(map, ids);
+  }, [map, stations]);
 
   useEffect(() => {
     dataRef.current = data;
@@ -115,9 +128,30 @@ export function StationMarkers({
             filter: ["!", ["has", "point_count"]],
             paint: {
               "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
-              "circle-radius": 13,
+              "circle-radius": 16,
               "circle-stroke-width": 2,
               "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
+            },
+          });
+        }
+
+        if (!map.getLayer(BRAND_LAYER)) {
+          map.addLayer({
+            id: BRAND_LAYER,
+            type: "symbol",
+            source: SOURCE_ID,
+            minzoom: PRICE_LABEL_MIN_ZOOM,
+            filter: [
+              "all",
+              ["!", ["has", "point_count"]],
+              ["!=", ["get", "brandImage"], ""],
+            ],
+            layout: {
+              "icon-image": ["get", "brandImage"],
+              "icon-size": 0.62,
+              "icon-allow-overlap": true,
+              "icon-anchor": "center",
+              "icon-offset": [0, -6],
             },
           });
         }
@@ -135,7 +169,9 @@ export function StationMarkers({
             ],
             layout: {
               "text-field": ["get", "priceLabel"],
-              "text-size": 10,
+              "text-size": 9,
+              "text-offset": [0, 1.15],
+              "text-anchor": "top",
               "text-allow-overlap": true,
             },
             paint: { "text-color": "#0f172a" },
@@ -183,10 +219,13 @@ export function StationMarkers({
 
     map.on("click", CLUSTER_LAYER, handleClusterClick);
     map.on("click", POINT_LAYER, handlePointClick);
+    map.on("click", BRAND_LAYER, handlePointClick);
     map.on("mouseenter", CLUSTER_LAYER, setPointer);
     map.on("mouseleave", CLUSTER_LAYER, clearPointer);
     map.on("mouseenter", POINT_LAYER, setPointer);
     map.on("mouseleave", POINT_LAYER, clearPointer);
+    map.on("mouseenter", BRAND_LAYER, setPointer);
+    map.on("mouseleave", BRAND_LAYER, clearPointer);
 
     return () => {
       map.off("load", ensureLayers);
@@ -194,10 +233,13 @@ export function StationMarkers({
       map.off("idle", ensureLayers);
       map.off("click", CLUSTER_LAYER, handleClusterClick);
       map.off("click", POINT_LAYER, handlePointClick);
+      map.off("click", BRAND_LAYER, handlePointClick);
       map.off("mouseenter", CLUSTER_LAYER, setPointer);
       map.off("mouseleave", CLUSTER_LAYER, clearPointer);
       map.off("mouseenter", POINT_LAYER, setPointer);
       map.off("mouseleave", POINT_LAYER, clearPointer);
+      map.off("mouseenter", BRAND_LAYER, setPointer);
+      map.off("mouseleave", BRAND_LAYER, clearPointer);
     };
   }, [map]);
 
