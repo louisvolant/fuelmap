@@ -12,14 +12,17 @@ import { StationsStatus } from "@/components/map/StationsStatus";
 import { StationSheet } from "@/components/station/StationSheet";
 import { LocateButton } from "@/components/map/LocateButton";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
+import { SettingsButton } from "@/components/settings/SettingsButton";
+import { SettingsSheet } from "@/components/settings/SettingsSheet";
 import { getCountry } from "@/countries";
 import {
   useActiveFuelId,
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
 import { useStations } from "@/hooks/useStations";
+import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
-import { DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
+import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
@@ -43,7 +46,10 @@ export default function App() {
   const setOpenSheet = useUiStore((state) => state.setOpenSheet);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const loadFavorites = useFavoritesStore((state) => state.load);
+  const theme = useTheme();
   const [map, setMap] = useState<MapLibreMap | null>(null);
+
+  const mapStyle = theme === "dark" ? DARK_MAP_STYLE : DEFAULT_MAP_STYLE;
 
   useEffect(() => {
     void loadFavorites();
@@ -72,7 +78,7 @@ export default function App() {
         <MapCanvas
           center={country.center}
           zoom={country.zoom}
-          styleUrl={DEFAULT_MAP_STYLE.url}
+          styleUrl={mapStyle.url}
           onMapReady={setMap}
           className="h-full w-full"
         />
@@ -92,6 +98,7 @@ export default function App() {
             <FiltersButton />
             <FavoritesButton />
             <StationsStatus count={filteredStations.length} />
+            <SettingsButton />
           </div>
         </div>
 
@@ -110,6 +117,11 @@ export default function App() {
           onClose={() => setOpenSheet(null)}
           stations={stations ?? []}
           onSelect={(id) => selectStation(id)}
+        />
+
+        <SettingsSheet
+          open={openSheet === "settings"}
+          onClose={() => setOpenSheet(null)}
         />
 
         <StationSheet

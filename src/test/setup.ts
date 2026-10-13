@@ -17,6 +17,21 @@ vi.stubGlobal(
   ),
 );
 
+// jsdom does not implement matchMedia, used by the theme hook.
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
 // MapLibre GL requires WebGL, which jsdom does not implement. Provide a minimal
 // mock so components that embed the map can be rendered in unit tests.
 vi.mock("maplibre-gl", () => {
