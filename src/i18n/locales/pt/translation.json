@@ -79,7 +79,9 @@
     "gasolina98": "Gasolina 98",
     "gasoleoPremium": "Gasóleo Premium",
     "glp": "GPL",
-    "gnc": "GNC"
+    "gnc": "GNC",
+    "diesel": "Gasóleo",
+    "e5": "Super E5"
   },
   "errors": {
     "generic": "Ocorreu um erro",

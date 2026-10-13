@@ -97,19 +97,43 @@ export interface NormalizedStation {
 
 /**
  * Contract implemented by each country's data adapter.
+ *
+ * Two strategies are supported:
+ * - `"bulk"`: the provider exposes the whole country dataset in one place
+ *   (France, Spain). `fetchStations()` loads everything.
+ * - `"area"`: the provider only answers per-zone queries (Germany, Tankerkönig).
+ *   `fetchArea(bounds)` loads the stations of a map viewport.
+ *
  * Keeping this interface stable makes it trivial to add countries in phase 2.
  */
-export interface FuelDataSource {
+export type BoundingBox = [west: number, south: number, east: number, north: number];
+
+interface BaseFuelDataSource {
   id: string;
   /** Country this source feeds. */
   country: CountryCode;
-  /** Fetch and normalize every station of the country. */
-  fetchStations(options?: { signal?: AbortSignal }): Promise<NormalizedStation[]>;
   /** Suggested client-side refresh cadence, in milliseconds. */
   refreshIntervalMs: number;
   /** Attribution string displayed in the UI. */
   attribution: string;
 }
+
+export interface BulkFuelDataSource extends BaseFuelDataSource {
+  kind: "bulk";
+  /** Fetch and normalize every station of the country. */
+  fetchStations(options?: { signal?: AbortSignal }): Promise<NormalizedStation[]>;
+}
+
+export interface AreaFuelDataSource extends BaseFuelDataSource {
+  kind: "area";
+  /** Fetch and normalize the stations covered by a viewport bounding box. */
+  fetchArea(
+    bounds: BoundingBox,
+    options?: { signal?: AbortSignal },
+  ): Promise<NormalizedStation[]>;
+}
+
+export type FuelDataSource = BulkFuelDataSource | AreaFuelDataSource;
 
 export interface CountryDefinition {
   code: CountryCode;

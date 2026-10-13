@@ -36,7 +36,7 @@ export async function waitForLayer(page: Page, layer: string): Promise<void> {
       }
     },
     layer,
-    { timeout: 20_000 },
+    { timeout: 30_000 },
   );
 }
 

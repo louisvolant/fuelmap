@@ -79,7 +79,9 @@
     "gasolina98": "Benzine 98",
     "gasoleoPremium": "Premium-diesel",
     "glp": "LPG",
-    "gnc": "CNG"
+    "gnc": "CNG",
+    "diesel": "Diesel",
+    "e5": "Super E5"
   },
   "errors": {
     "generic": "Er is een fout opgetreden",

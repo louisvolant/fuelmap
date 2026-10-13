@@ -105,6 +105,7 @@ export function normalizeEsStation(
 export const SPAIN_DATA_SOURCE: FuelDataSource = {
   id: "es-minetur",
   country: "ES",
+  kind: "bulk",
   refreshIntervalMs: 30 * 60 * 1000,
   attribution:
     "Precios de carburantes — Ministerio para la Transición Ecológica (geoportalgasolineras.es)",

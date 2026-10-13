@@ -17,7 +17,7 @@ test("switches to the dark theme", async ({ page }) => {
 
 test("switches the interface language", async ({ page }) => {
   await page.getByRole("button", { name: "Réglages" }).click();
-  await page.getByRole("combobox").selectOption("de");
+  await page.getByRole("combobox", { name: "Langue" }).selectOption("de");
 
   // The status pill is now in German.
   await expect(page.getByText(/Tankstellen:\s*4/)).toBeVisible();

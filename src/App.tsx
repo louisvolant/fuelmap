@@ -5,21 +5,22 @@ import { FavoritesSheet } from "@/components/favorites/FavoritesSheet";
 import { FilterSheet } from "@/components/filters/FilterSheet";
 import { FiltersButton } from "@/components/filters/FiltersButton";
 import { FuelFilterBar } from "@/components/filters/FuelFilterBar";
+import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
-import { StationSheet } from "@/components/station/StationSheet";
-import { LocateButton } from "@/components/map/LocateButton";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
 import { SettingsButton } from "@/components/settings/SettingsButton";
 import { SettingsSheet } from "@/components/settings/SettingsSheet";
+import { StationSheet } from "@/components/station/StationSheet";
 import { getCountry } from "@/countries";
+import type { BoundingBox } from "@/countries/types";
 import {
   useActiveFuelId,
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
-import { useStations } from "@/hooks/useStations";
+import { useCountryStations } from "@/hooks/useCountryStations";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
@@ -32,13 +33,21 @@ import { useUiStore } from "@/stores/uiStore";
 export default function App() {
   const countryCode = useCountryStore((state) => state.country);
   const country = getCountry(countryCode);
-  const { data: stations } = useStations(countryCode);
+  const isAreaCountry = country.dataSource?.kind === "area";
+
+  const [bounds, setBounds] = useState<BoundingBox | null>(null);
+  const { stations, isLoading, isError, refetch } = useCountryStations(
+    countryCode,
+    bounds,
+  );
+
   const userPosition = useGeolocationStore((state) => state.position);
   const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
-  const filteredStations = useFilteredStations(stations ?? [], {
+  const filteredStations = useFilteredStations(stations, {
     center: userPosition ?? undefined,
     maxDistanceMeters: maxDistanceMeters ?? undefined,
   });
+
   const activeFuelId = useActiveFuelId();
   const selectStation = useUiStore((state) => state.selectStation);
   const selectedStationId = useUiStore((state) => state.selectedStationId);
@@ -67,10 +76,39 @@ export default function App() {
     map.flyTo({ center: country.center, zoom: country.zoom, duration: 800 });
   }, [map, country, countryCode]);
 
-  const allServices = useMemo(() => collectServices(stations ?? []), [stations]);
+  // Track the viewport only for area-based countries (on-demand loading).
+  useEffect(() => {
+    if (!map || !isAreaCountry) return;
+
+    const update = () => {
+      const box = map.getBounds();
+      if (!box) return;
+      setBounds([
+        box.getWest(),
+        box.getSouth(),
+        box.getEast(),
+        box.getNorth(),
+      ]);
+    };
+
+    update();
+    let timeout: number | undefined;
+    const onMove = () => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(update, 400);
+    };
+
+    map.on("moveend", onMove);
+    return () => {
+      window.clearTimeout(timeout);
+      map.off("moveend", onMove);
+    };
+  }, [map, isAreaCountry]);
+
+  const allServices = useMemo(() => collectServices(stations), [stations]);
 
   const selectedStation = useMemo(
-    () => (stations ?? []).find((station) => station.id === selectedStationId) ?? null,
+    () => stations.find((station) => station.id === selectedStationId) ?? null,
     [stations, selectedStationId],
   );
 
@@ -109,7 +147,12 @@ export default function App() {
           <div className="flex items-center gap-2">
             <FiltersButton />
             <FavoritesButton />
-            <StationsStatus count={filteredStations.length} />
+            <StationsStatus
+              count={filteredStations.length}
+              isLoading={isLoading}
+              isError={isError}
+              onRetry={refetch}
+            />
             <SettingsButton />
           </div>
         </div>
@@ -127,7 +170,7 @@ export default function App() {
         <FavoritesSheet
           open={openSheet === "favorites"}
           onClose={() => setOpenSheet(null)}
-          stations={stations ?? []}
+          stations={stations}
           onSelect={(id) => selectStation(id)}
         />
 

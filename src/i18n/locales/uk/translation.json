@@ -79,7 +79,9 @@
     "gasolina98": "Бензин 98",
     "gasoleoPremium": "Дизель преміум",
     "glp": "Газ (LPG)",
-    "gnc": "Газ (CNG)"
+    "gnc": "Газ (CNG)",
+    "diesel": "Дизель",
+    "e5": "Бензин E5"
   },
   "errors": {
     "generic": "Сталася помилка",

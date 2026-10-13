@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockSpainApi } from "./support/mockSpainApi";
+import { mockGermanyApi } from "./support/mockGermanyApi";
 import { waitForStations } from "./support/map";
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockSpainApi(page);
+  await mockGermanyApi(page);
   await page.goto("/");
   await waitForStations(page);
 });
@@ -18,6 +20,16 @@ test("switches to Spain and loads Spanish stations", async ({ page }) => {
   await page.getByRole("combobox", { name: "Pays" }).selectOption("ES");
 
   await expect(page.getByText(/Stations:\s*2/)).toBeVisible();
+});
+
+test("switches to Germany and loads stations for the viewport", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Réglages" }).click();
+  await page.getByRole("combobox", { name: "Pays" }).selectOption("DE");
+
+  // Germany is area-based: stations are fetched for the current viewport.
+  await expect(page.getByText(/Stations:\s*3/)).toBeVisible({ timeout: 15_000 });
 });
 
 test("resets the fuel filter when switching country", async ({ page }) => {

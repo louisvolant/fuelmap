@@ -1,21 +1,23 @@
 import { useTranslation } from "react-i18next";
-import { useStations } from "@/hooks/useStations";
-import { useCountryStore } from "@/stores/countryStore";
 
 interface StationsStatusProps {
   /** Number of stations currently displayed (after filtering). */
   count: number;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
 }
 
 /**
- * Compact status pill overlaid on the map.
- * Temporary dev-facing surface that proves data loading works; it will sit next
- * to the filter bar once markers are rendered.
+ * Compact status pill overlaid on the map: loading, error or station count.
  */
-export function StationsStatus({ count }: StationsStatusProps) {
+export function StationsStatus({
+  count,
+  isLoading,
+  isError,
+  onRetry,
+}: StationsStatusProps) {
   const { t } = useTranslation();
-  const country = useCountryStore((state) => state.country);
-  const { isLoading, isError, refetch } = useStations(country);
 
   const baseClasses =
     "pointer-events-auto rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow backdrop-blur dark:bg-slate-800/90 dark:text-slate-100";
@@ -24,7 +26,7 @@ export function StationsStatus({ count }: StationsStatusProps) {
     return (
       <button
         type="button"
-        onClick={() => void refetch()}
+        onClick={onRetry}
         className={`${baseClasses} text-red-600 dark:text-red-400`}
       >
         {t("map.loadError")}

@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 /**
  * Shared React Query client.
  * Stations are cached for a day and refreshed automatically on an interval that
- * matches the source cadence (see `useStations`).
+ * matches the source cadence (see `useCountryStations`).
  */
 export const queryClient = new QueryClient({
   defaultOptions: {

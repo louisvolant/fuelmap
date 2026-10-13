@@ -79,6 +79,14 @@ vi.mock("maplibre-gl", () => {
     flyTo() {
       return this;
     }
+    getBounds() {
+      return {
+        getWest: () => -180,
+        getSouth: () => -85,
+        getEast: () => 180,
+        getNorth: () => 85,
+      };
+    }
     getCanvas() {
       return document.createElement("canvas");
     }

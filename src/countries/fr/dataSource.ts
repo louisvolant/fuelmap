@@ -194,6 +194,7 @@ export function normalizeFrStation(raw: RawFrRecord): NormalizedStation | null {
 export const FRANCE_DATA_SOURCE: FuelDataSource = {
   id: "fr-dgccrf",
   country: "FR",
+  kind: "bulk",
   refreshIntervalMs: 10 * 60 * 1000,
   attribution:
     "Prix des carburants — DGCCRF / data.economie.gouv.fr (Licence Ouverte 2.0)",
