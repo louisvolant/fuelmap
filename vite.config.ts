@@ -12,7 +12,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "_redirects"],
+      includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
       manifest: {
         name: "FuelMap",
         short_name: "FuelMap",
