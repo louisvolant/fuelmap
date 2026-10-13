@@ -60,6 +60,9 @@ test("clusters nearby stations at country zoom", async ({ page }) => {
 });
 
 test("renders individual markers when zoomed in", async ({ page }) => {
+  // Ensure stations are loaded before moving the camera.
+  await waitForLayer(page, "station-clusters");
+
   await page.evaluate(() => {
     (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap.jumpTo({
       center: [2.3522, 48.8566],

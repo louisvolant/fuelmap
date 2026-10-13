@@ -22,6 +22,9 @@ French government fuel-price open data.
 - 🌍 **France, Spain and Germany** — switch country from the settings; each
   country brings its own fuel catalog and price source.
 - ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
+- 📋 **Sortable list** — stations ranked by price or by distance.
+- 🧭 **Stations on your route** — pick a destination on the map, then keep only
+  the stations along the driving route.
 - 💶 **Prices on markers** — the selected fuel's price, shown from a given zoom.
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.
@@ -30,9 +33,12 @@ French government fuel-price open data.
 - 🎛️ **Advanced filters** — hide shortages, 24/7 automated pumps only, required
   services, and a radius around your position.
 - 📌 **Geolocation** — recenter on your position at any time.
+- 📈 **Fill-up history** — delegated to [FuelStats](https://www.fuelstats.net).
 - 🌗 **Light / dark theme**, following the system by default.
 - 🌍 **7 UI languages** — `fr`, `uk`, `de`, `es`, `pt`, `it`, `nl`.
 - 📱 **Installable PWA** — offline app shell, cached tiles and prices.
+- ⚡ **Light first load** — MapLibre (~1 MB) is lazy-loaded in its own chunk, so
+  the app shell, filters and sheets paint without waiting for the map engine.
 
 ## Tech stack
 

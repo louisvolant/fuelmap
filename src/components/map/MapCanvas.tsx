@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Map as MapLibreMap, NavigationControl, ScaleControl } from "maplibre-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
+import { loadMapLibre } from "@/lib/mapLibreLoader";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 declare global {
@@ -20,7 +21,7 @@ interface MapCanvasProps {
   /** OpenFreeMap style URL. */
   styleUrl: string;
   className?: string;
-  /** Called once the map has fired its first `load` event. */
+  /** Called once the map instance is created. */
   onMapReady?: (map: MapLibreMap) => void;
 }
 
@@ -41,30 +42,34 @@ export function MapCanvas({
     onMapReadyRef.current = onMapReady;
   }, [onMapReady]);
 
-  // Create the map exactly once. Camera changes are handled by the parent.
+  // Create the map exactly once, after MapLibre has been lazy-loaded.
   useEffect(() => {
-    if (!containerRef.current) return;
+    let cancelled = false;
+    let map: MapLibreMap | null = null;
 
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: styleUrl,
-      center,
-      zoom,
-      attributionControl: { compact: true },
-    });
+    void (async () => {
+      const maplibregl = await loadMapLibre();
+      if (cancelled || !containerRef.current) return;
 
-    mapRef.current = map;
-    window.__fuelmapMap = map;
-    map.addControl(new NavigationControl({ showCompass: false }), "bottom-right");
-    map.addControl(new ScaleControl({ maxWidth: 100 }), "bottom-left");
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: styleUrl,
+        center,
+        zoom,
+        attributionControl: { compact: true },
+      });
 
-    // Hand the instance over immediately: consumers guard on `isStyleLoaded()`
-    // and react to `styledata`, so there is no need to wait for the (potentially
-    // slow) `load` event, which also waits for every initial tile.
-    onMapReadyRef.current?.(map);
+      mapRef.current = map;
+      window.__fuelmapMap = map;
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new maplibregl.ScaleControl({ maxWidth: 100 }), "bottom-left");
+
+      onMapReadyRef.current?.(map);
+    })();
 
     return () => {
-      map.remove();
+      cancelled = true;
+      map?.remove();
       mapRef.current = null;
       delete window.__fuelmapMap;
     };

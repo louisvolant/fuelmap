@@ -32,6 +32,13 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// MapLibre is lazy-loaded through this module. Bypass it in tests to avoid the
+// `?worker&url` import and keep the mocked `maplibre-gl` module.
+vi.mock("@/lib/mapLibreLoader", async () => {
+  const maplibre = await import("maplibre-gl");
+  return { loadMapLibre: async () => maplibre };
+});
+
 // MapLibre GL requires WebGL, which jsdom does not implement. Provide a minimal
 // mock so components that embed the map can be rendered in unit tests.
 vi.mock("maplibre-gl", () => {

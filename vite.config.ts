@@ -71,4 +71,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    // MapLibre GL JS is lazy-loaded in its own chunk (~1 MB minified). It is not
+    // part of the first load, so raise the size warning threshold accordingly.
+    chunkSizeWarningLimit: 1200,
+  },
 });
