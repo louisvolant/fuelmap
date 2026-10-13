@@ -19,6 +19,12 @@
     "themeDark": "Sombre",
     "themeSystem": "Système"
   },
+  "navigation": {
+    "title": "Itinéraire",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Plans"
+  },
   "station": {
     "title": "Station",
     "fuels": "Carburants",

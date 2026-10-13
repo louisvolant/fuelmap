@@ -19,6 +19,12 @@
     "themeDark": "Oscuro",
     "themeSystem": "Sistema"
   },
+  "navigation": {
+    "title": "Ruta",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Mapas de Apple"
+  },
   "station": {
     "title": "Gasolinera",
     "fuels": "Combustibles",

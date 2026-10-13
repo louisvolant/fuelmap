@@ -19,6 +19,12 @@
     "themeDark": "Scuro",
     "themeSystem": "Sistema"
   },
+  "navigation": {
+    "title": "Percorso",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Mappe Apple"
+  },
   "station": {
     "title": "Distributore",
     "fuels": "Carburanti",

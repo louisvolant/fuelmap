@@ -53,6 +53,23 @@ describe("StationSheet", () => {
     expect(screen.getByText("Paris")).toBeInTheDocument();
   });
 
+  it("renders navigation hand-off links", () => {
+    render(
+      <StationSheet
+        station={station}
+        country={getCountry("FR")}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Waze" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("waze.com"),
+    );
+    expect(screen.getByRole("link", { name: "Google Maps" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Plans" })).toBeInTheDocument();
+  });
+
   it("sorts available fuels before unavailable ones", () => {
     render(
       <StationSheet

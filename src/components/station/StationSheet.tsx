@@ -4,6 +4,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { formatDistance } from "@/lib/format";
 import { getFuel } from "@/lib/fuelCatalog";
 import { FuelPriceRow } from "./FuelPriceRow";
+import { NavigationButtons } from "./NavigationButtons";
 import { OpeningHours } from "./OpeningHours";
 import { ServicesList } from "./ServicesList";
 
@@ -84,6 +85,7 @@ export function StationSheet({
           hours={station.openingHours}
           automat24h={station.automat24h}
         />
+        <NavigationButtons lat={station.lat} lon={station.lon} />
       </div>
     </Sheet>
   );

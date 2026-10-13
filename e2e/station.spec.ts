@@ -39,3 +39,22 @@ test("closes the station sheet", async ({ page }) => {
   await dialog.getByRole("button", { name: "Fermer" }).last().click();
   await expect(dialog).toBeHidden();
 });
+
+test("offers Waze, Google Maps and Apple Maps hand-off", async ({ page }) => {
+  await focusParis(page);
+  await clickStation(page, "FR:75101001");
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("link", { name: "Waze" })).toHaveAttribute(
+    "href",
+    /waze\.com\/ul\?ll=48\.856600,2\.352200/,
+  );
+  await expect(dialog.getByRole("link", { name: "Google Maps" })).toHaveAttribute(
+    "href",
+    /google\.com\/maps\/dir\/\?api=1&destination=48\.856600,2\.352200/,
+  );
+  await expect(dialog.getByRole("link", { name: "Plans" })).toHaveAttribute(
+    "href",
+    /maps\.apple\.com\/\?daddr=48\.856600,2\.352200/,
+  );
+});

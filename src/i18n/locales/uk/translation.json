@@ -19,6 +19,12 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "navigation": {
+    "title": "Маршрут",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Карти Apple"
+  },
   "station": {
     "title": "АЗС",
     "fuels": "Пальне",

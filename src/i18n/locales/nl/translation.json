@@ -19,6 +19,12 @@
     "themeDark": "Donker",
     "themeSystem": "Systeem"
   },
+  "navigation": {
+    "title": "Route",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Apple Kaarten"
+  },
   "station": {
     "title": "Tankstation",
     "fuels": "Brandstoffen",

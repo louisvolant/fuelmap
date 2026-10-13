@@ -19,6 +19,12 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "navigation": {
+    "title": "Rota",
+    "waze": "Waze",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Mapas Apple"
+  },
   "station": {
     "title": "Posto",
     "fuels": "Combustíveis",
