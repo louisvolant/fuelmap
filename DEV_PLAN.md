@@ -400,7 +400,48 @@ documented, commented `[vars]` section, so this switch is low-friction.
 
 ---
 
-## 11. Roadmap / milestones
+## 11. Testing strategy
+
+Tests are part of every feature commit, never a separate one.
+
+### Unit & component tests — Vitest + Testing Library
+- **Environment**: jsdom, with `fake-indexeddb` (IndexedDB), a stubbed `fetch`
+  (returns an empty ODS page by default; no real network in tests) and a mocked
+  `maplibre-gl` (WebGL is unavailable in jsdom).
+- **Naming**: colocated `*.test.ts(x)` next to the source file.
+- **Scope**: pure logic (fuel catalog, geo, freshness formatting, navigation
+  deep links), adapters (FR normalization, opening hours parsing), the IndexedDB
+  layer, stores, and key components (filter bar, station sheet, favorites).
+- **Helpers**: `src/test/renderWithProviders.tsx` wraps components in the app
+  providers (React Query, …).
+
+### End-to-end tests — Playwright
+- **Directory**: `e2e/`, config in `playwright.config.ts`.
+- **Determinism**: the fuel API is **intercepted with `page.route()`** and served
+  from a fixture (`e2e/fixtures/`), so tests never depend on the live government
+  API. IndexedDB and `localStorage` are reset between tests.
+- **Covered flows**:
+  1. The full-screen map loads and renders station markers.
+  2. Filtering by fuel updates the visible markers.
+  3. Opening a station shows its fuels, prices and last-update times.
+  4. Waze / Google Maps / Apple Maps hand-off buttons carry the right coordinates.
+  5. Favorites are persisted (survive a reload) and highlighted on the map.
+  6. Geolocation + recenter (geolocation stubbed via Playwright permissions).
+  7. The app is installable as a PWA (manifest present) and works in dark mode.
+- **Commands**: `npm run e2e` (headless) and `npm run e2e:ui` (interactive).
+- **Browsers**: Chromium is enough for CI; all browsers can be run locally.
+
+### Commands summary
+```bash
+npm run lint        # ESLint
+npm test            # Vitest (unit + component)
+npm run e2e         # Playwright (end-to-end)
+npm run build       # type-check + production build
+```
+
+---
+
+## 12. Roadmap / milestones
 
 | # | Milestone | Commit (feature) |
 |---|---|---|
@@ -415,6 +456,7 @@ documented, commented `[vars]` section, so this switch is low-friction.
 | M8 | Fullscreen OpenFreeMap map | `feat: add fullscreen openfreemap map` |
 | M9 | IndexedDB layer | `feat: add indexeddb storage layer` |
 | M10 | Station loading + caching | `feat: load and cache stations with tanstack query` |
+| M10b | Playwright E2E setup | `test: add playwright end-to-end test setup` |
 | M11 | Station markers + clustering | `feat: render clustered station markers with price labels` |
 | M12 | Fuel filter | `feat: add fuel type filter` |
 | M13 | Advanced filters | `feat: add radius availability and service filters` |
@@ -428,7 +470,7 @@ documented, commented `[vars]` section, so this switch is low-friction.
 
 ---
 
-## 12. Risks & mitigations
+## 13. Risks & mitigations
 
 | Risk / constraint | Impact | Mitigation |
 |---|---|---|
@@ -442,7 +484,7 @@ documented, commented `[vars]` section, so this switch is low-friction.
 
 ---
 
-## 13. Acceptance criteria (MVP)
+## 14. Acceptance criteria (MVP)
 
 - [ ] Full-screen map using the OpenFreeMap basemap.
 - [ ] French stations rendered with the **selected fuel's price** on markers (from a given zoom).
@@ -454,3 +496,4 @@ documented, commented `[vars]` section, so this switch is low-friction.
 - [ ] Works in **light and dark** themes.
 - [ ] UI available in `fr`, `uk`, `de`, `es`, `pt`, `it`, `nl`.
 - [ ] Adding a new country requires only a registry entry + one adapter file.
+- [ ] `npm test` (Vitest) and `npm run e2e` (Playwright) cover the main flows and pass.
