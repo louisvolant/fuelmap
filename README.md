@@ -21,6 +21,9 @@ French government fuel-price open data.
 - 🗺️ **Full-screen map** — OpenFreeMap vector tiles, no API key, no cost.
 - 🌍 **France, Spain and Germany** — switch country from the settings; each
   country brings its own fuel catalog and price source.
+- 🏷️ **Brand logos on markers** — a round brand mark is shown on each price
+  bubble (TotalEnergies, Esso, E.Leclerc, Carrefour, Avia, Système U,
+  Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan, Match, Cora, BP).
 - ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
 - 📋 **Sortable list** — stations ranked by price or by distance.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
@@ -67,6 +70,20 @@ French government fuel-price open data.
 - **Attribution:** *Prix des carburants — DGCCRF / data.economie.gouv.fr*
 - ⚠️ The API exposes neither brand nor station name, and its `latitude`/`longitude`
   fields are integers ×100 000 — FuelMap only trusts the `geom` field.
+- **Brands are derived from OpenStreetMap**: fuel nodes (`amenity=fuel`) with a
+  `brand`/`operator`/`name` tag are fetched with Overpass for the current viewport
+  (from zoom 11) and matched to the nearest official station within 60 m. Results
+  are cached for a week. This is only used for France; Spain (`Rótulo`) and
+  Germany (`brand`) expose brands natively.
+
+### Brand marks
+
+Brand logos live in `src/assets/brands/*.svg` as small, round SVG marks
+(64×64, brand colour + short wordmark) and are registered as MapLibre images at
+runtime. They are **simplified marks**, not the official artwork, so they stay
+lightweight and fit inside a circular marker. To use official logos, replace the
+matching file (same name, 64×64 viewBox) — nothing else needs to change. Brand
+matching is alias-based (`src/lib/brands.ts`).
 
 ### Basemap
 
@@ -107,6 +124,7 @@ Open the printed URL (default http://localhost:5173).
 | `npm run e2e` | Run end-to-end tests (Playwright) |
 | `npm run e2e:ui` | Run Playwright in interactive UI mode |
 | `npm run icons` | Regenerate the PWA icons |
+| `npm run brands` | Regenerate the embedded brand marks |
 
 > Playwright needs its browser once: `npx playwright install chromium`.
 

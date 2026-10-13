@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { mockFuelApi } from "./support/mockFuelApi";
+import { mockOverpass } from "./support/mockOverpass";
 import { clickStation, focusParis, waitForStations } from "./support/map";
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
+  await mockOverpass(page);
   await page.goto("/");
   await waitForStations(page);
 });

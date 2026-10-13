@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { mockFuelApi } from "./support/mockFuelApi";
+import { mockOverpass } from "./support/mockOverpass";
 import { sourceStationIds, waitForStations } from "./support/map";
 
 test.use({
@@ -9,6 +10,7 @@ test.use({
 
 test("filters stations within a radius of the user position", async ({ page }) => {
   await mockFuelApi(page);
+  await mockOverpass(page);
   await page.goto("/");
   await waitForStations(page);
 

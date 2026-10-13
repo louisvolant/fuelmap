@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockFuelApi } from "./support/mockFuelApi";
+import { mockOverpass } from "./support/mockOverpass";
 
 type TestMap = {
   jumpTo: (options: unknown) => void;
@@ -31,6 +32,7 @@ async function waitForLayer(page: Page, layer: string): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
+  await mockOverpass(page);
   await page.goto("/");
   await page.waitForFunction(() =>
     Boolean((window as unknown as { __fuelmapMap?: unknown }).__fuelmapMap),

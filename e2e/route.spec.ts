@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockFuelApi } from "./support/mockFuelApi";
+import { mockOverpass } from "./support/mockOverpass";
 import { mockRoute } from "./support/mockOsrm";
 import { waitForStations } from "./support/map";
 
@@ -32,6 +33,7 @@ async function pickDestination(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
+  await mockOverpass(page);
   await page.goto("/");
   await waitForStations(page);
 });

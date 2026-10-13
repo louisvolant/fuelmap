@@ -26,11 +26,14 @@ import {
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
 import { useCountryStations } from "@/hooks/useCountryStations";
+import { useOsmBrands } from "@/hooks/useOsmBrands";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
+import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { stationsAlongRoute } from "@/lib/routeStations";
 import { sortStations } from "@/lib/sortStations";
+import { PRICE_LABEL_MIN_ZOOM } from "@/components/map/stationLayers";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
@@ -44,17 +47,32 @@ const ROUTE_CORRIDOR_METERS = 2000;
 export default function App() {
   const countryCode = useCountryStore((state) => state.country);
   const country = getCountry(countryCode);
-  const isAreaCountry = country.dataSource?.kind === "area";
 
-  const [bounds, setBounds] = useState<BoundingBox | null>(null);
+  const [view, setView] = useState<{ bounds: BoundingBox; zoom: number } | null>(
+    null,
+  );
+  const bounds = view?.bounds ?? null;
   const { stations, isLoading, isError, refetch } = useCountryStations(
     countryCode,
     bounds,
   );
 
+  const osmBrands = useOsmBrands(
+    countryCode,
+    view && view.zoom >= PRICE_LABEL_MIN_ZOOM ? view.bounds : null,
+  );
+
+  const enrichedStations = useMemo(
+    () =>
+      countryCode === "FR"
+        ? enrichStationsWithBrands(stations, osmBrands.data ?? [])
+        : stations,
+    [countryCode, stations, osmBrands.data],
+  );
+
   const userPosition = useGeolocationStore((state) => state.position);
   const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
-  const filteredStations = useFilteredStations(stations, {
+  const filteredStations = useFilteredStations(enrichedStations, {
     center: userPosition ?? undefined,
     maxDistanceMeters: maxDistanceMeters ?? undefined,
   });
@@ -90,19 +108,18 @@ export default function App() {
     map.flyTo({ center: country.center, zoom: country.zoom, duration: 800 });
   }, [map, country, countryCode]);
 
-  // Track the viewport only for area-based countries (on-demand loading).
+  // Track the viewport (bounds + zoom): used for area-based loading (Germany)
+  // and for the OpenStreetMap brand enrichment in France.
   useEffect(() => {
-    if (!map || !isAreaCountry) return;
+    if (!map) return;
 
     const update = () => {
       const box = map.getBounds();
       if (!box) return;
-      setBounds([
-        box.getWest(),
-        box.getSouth(),
-        box.getEast(),
-        box.getNorth(),
-      ]);
+      setView({
+        bounds: [box.getWest(), box.getSouth(), box.getEast(), box.getNorth()],
+        zoom: map.getZoom(),
+      });
     };
 
     update();
@@ -117,9 +134,12 @@ export default function App() {
       window.clearTimeout(timeout);
       map.off("moveend", onMove);
     };
-  }, [map, isAreaCountry]);
+  }, [map]);
 
-  const allServices = useMemo(() => collectServices(stations), [stations]);
+  const allServices = useMemo(
+    () => collectServices(enrichedStations),
+    [enrichedStations],
+  );
 
   // Restrict to the route corridor when the route filter is enabled.
   const visibleStations = useMemo(() => {
@@ -142,8 +162,9 @@ export default function App() {
   );
 
   const selectedStation = useMemo(
-    () => stations.find((station) => station.id === selectedStationId) ?? null,
-    [stations, selectedStationId],
+    () =>
+      enrichedStations.find((station) => station.id === selectedStationId) ?? null,
+    [enrichedStations, selectedStationId],
   );
 
   // Recenter the camera on the selected station.
@@ -218,7 +239,7 @@ export default function App() {
         <FavoritesSheet
           open={openSheet === "favorites"}
           onClose={() => setOpenSheet(null)}
-          stations={stations}
+          stations={enrichedStations}
           onSelect={(id) => selectStation(id)}
         />
 
