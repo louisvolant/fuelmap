@@ -20,7 +20,7 @@ export default function App() {
           zoom={country.zoom}
           styleUrl={DEFAULT_MAP_STYLE.url}
           onMapReady={setMap}
-          className="absolute inset-0"
+          className="h-full w-full"
         />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-3">
