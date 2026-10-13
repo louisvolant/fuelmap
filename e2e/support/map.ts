@@ -1,11 +1,18 @@
 import { type Page } from "@playwright/test";
 
+type GeoJsonFeature = {
+  properties?: { id?: string };
+  geometry?: { coordinates: [number, number] };
+};
+type GeoJsonCollection = { features: GeoJsonFeature[] };
+
 export type TestMap = {
   jumpTo: (options: unknown) => void;
   getLayer: (id: string) => unknown;
   getSource: (id: string) => {
-    serialize: () => { data: { features: { properties?: { id?: string } }[] } };
+    serialize: () => { data: GeoJsonCollection };
   };
+  project: (lngLat: [number, number]) => { x: number; y: number };
   queryRenderedFeatures: (options: unknown) => { properties?: { id?: string } }[];
 };
 
@@ -39,6 +46,17 @@ export async function waitForStations(page: Page): Promise<void> {
   await waitForLayer(page, "station-clusters");
 }
 
+/** Move the camera over Paris at a zoom where markers are unclustered. */
+export async function focusParis(page: Page, zoom = 15): Promise<void> {
+  await page.evaluate((value) => {
+    (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap.jumpTo({
+      center: [2.3522, 48.8566],
+      zoom: value,
+    });
+  }, zoom);
+  await waitForLayer(page, "station-points");
+}
+
 /** Sorted station ids currently fed into the map source. */
 export function sourceStationIds(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -49,4 +67,20 @@ export function sourceStationIds(page: Page): Promise<string[]> {
       .data.features.map((feature) => feature.properties?.id ?? "")
       .sort();
   });
+}
+
+/** Click the marker of a station by projecting its coordinates to screen space. */
+export async function clickStation(page: Page, id: string): Promise<void> {
+  const point = await page.evaluate((stationId) => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    const collection = map.getSource("stations").serialize().data;
+    const feature = collection.features.find(
+      (item) => item.properties?.id === stationId,
+    );
+    if (!feature?.geometry) throw new Error(`station ${stationId} not found`);
+    const projected = map.project(feature.geometry.coordinates);
+    return { x: projected.x, y: projected.y };
+  }, id);
+
+  await page.mouse.click(point.x, point.y);
 }

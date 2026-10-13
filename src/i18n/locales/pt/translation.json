@@ -19,6 +19,21 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "station": {
+    "title": "Posto",
+    "fuels": "Combustíveis",
+    "noFuels": "Sem combustíveis",
+    "noPrice": "Preço não indicado",
+    "unavailable": "Indisponível",
+    "shortageTemporary": "Rutura temporária",
+    "shortageDefinitive": "Rutura definitiva",
+    "services": "Serviços",
+    "openingHours": "Horário",
+    "automat24h": "Bomba automática 24 h",
+    "closed": "Fechado",
+    "highway": "Autoestrada",
+    "route": "Estrada"
+  },
   "filters": {
     "fuel": "Combustível",
     "title": "Filtros",

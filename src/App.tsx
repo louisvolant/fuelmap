@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { FilterSheet } from "@/components/filters/FilterSheet";
 import { FiltersButton } from "@/components/filters/FiltersButton";
@@ -7,6 +7,7 @@ import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
+import { StationSheet } from "@/components/station/StationSheet";
 import { getCountry } from "@/countries";
 import {
   useActiveFuelId,
@@ -25,14 +26,27 @@ export default function App() {
   const filteredStations = useFilteredStations(stations ?? []);
   const activeFuelId = useActiveFuelId();
   const selectStation = useUiStore((state) => state.selectStation);
+  const selectedStationId = useUiStore((state) => state.selectedStationId);
   const openSheet = useUiStore((state) => state.openSheet);
   const setOpenSheet = useUiStore((state) => state.setOpenSheet);
   const [map, setMap] = useState<MapLibreMap | null>(null);
 
-  const allServices = useMemo(
-    () => collectServices(stations ?? []),
-    [stations],
+  const allServices = useMemo(() => collectServices(stations ?? []), [stations]);
+
+  const selectedStation = useMemo(
+    () => (stations ?? []).find((station) => station.id === selectedStationId) ?? null,
+    [stations, selectedStationId],
   );
+
+  // Recenter the camera on the selected station.
+  useEffect(() => {
+    if (!map || !selectedStation) return;
+    map.easeTo({
+      center: [selectedStation.lon, selectedStation.lat],
+      zoom: Math.max(map.getZoom(), 14),
+      duration: 500,
+    });
+  }, [map, selectedStation]);
 
   return (
     <MapContext.Provider value={map}>
@@ -63,6 +77,12 @@ export default function App() {
           open={openSheet === "filters"}
           onClose={() => setOpenSheet(null)}
           services={allServices}
+        />
+
+        <StationSheet
+          station={selectedStation}
+          country={country}
+          onClose={() => selectStation(null)}
         />
       </div>
     </MapContext.Provider>

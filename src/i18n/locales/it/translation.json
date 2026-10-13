@@ -19,6 +19,21 @@
     "themeDark": "Scuro",
     "themeSystem": "Sistema"
   },
+  "station": {
+    "title": "Distributore",
+    "fuels": "Carburanti",
+    "noFuels": "Nessun carburante",
+    "noPrice": "Prezzo non disponibile",
+    "unavailable": "Non disponibile",
+    "shortageTemporary": "Carenza temporanea",
+    "shortageDefinitive": "Carenza definitiva",
+    "services": "Servizi",
+    "openingHours": "Orari",
+    "automat24h": "Self automatico 24 h",
+    "closed": "Chiuso",
+    "highway": "Autostrada",
+    "route": "Strada"
+  },
   "filters": {
     "fuel": "Carburante",
     "title": "Filtri",

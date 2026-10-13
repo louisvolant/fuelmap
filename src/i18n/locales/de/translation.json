@@ -19,6 +19,21 @@
     "themeDark": "Dunkel",
     "themeSystem": "System"
   },
+  "station": {
+    "title": "Tankstelle",
+    "fuels": "Kraftstoffe",
+    "noFuels": "Keine Kraftstoffe angegeben",
+    "noPrice": "Preis nicht angegeben",
+    "unavailable": "Nicht verfügbar",
+    "shortageTemporary": "Vorübergehender Engpass",
+    "shortageDefinitive": "Dauerhafter Engpass",
+    "services": "Services",
+    "openingHours": "Öffnungszeiten",
+    "automat24h": "24/7-Automat verfügbar",
+    "closed": "Geschlossen",
+    "highway": "Autobahn",
+    "route": "Straße"
+  },
   "filters": {
     "fuel": "Kraftstoff",
     "title": "Filter",

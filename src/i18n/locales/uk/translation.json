@@ -19,6 +19,21 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "station": {
+    "title": "АЗС",
+    "fuels": "Пальне",
+    "noFuels": "Пальне не вказано",
+    "noPrice": "Ціна не вказана",
+    "unavailable": "Недоступно",
+    "shortageTemporary": "Тимчасовий перебій",
+    "shortageDefinitive": "Остаточний перебій",
+    "services": "Послуги",
+    "openingHours": "Години роботи",
+    "automat24h": "Автомат доступний 24/7",
+    "closed": "Зачинено",
+    "highway": "Автострада",
+    "route": "Дорога"
+  },
   "filters": {
     "fuel": "Пальне",
     "title": "Фільтри",

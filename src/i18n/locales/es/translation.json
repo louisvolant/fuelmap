@@ -19,6 +19,21 @@
     "themeDark": "Oscuro",
     "themeSystem": "Sistema"
   },
+  "station": {
+    "title": "Gasolinera",
+    "fuels": "Combustibles",
+    "noFuels": "Sin combustibles",
+    "noPrice": "Precio no disponible",
+    "unavailable": "No disponible",
+    "shortageTemporary": "Desabastecimiento temporal",
+    "shortageDefinitive": "Desabastecimiento definitivo",
+    "services": "Servicios",
+    "openingHours": "Horario",
+    "automat24h": "Surtidor automático 24 h",
+    "closed": "Cerrado",
+    "highway": "Autopista",
+    "route": "Carretera"
+  },
   "filters": {
     "fuel": "Combustible",
     "title": "Filtros",

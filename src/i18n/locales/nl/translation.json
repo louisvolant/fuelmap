@@ -19,6 +19,21 @@
     "themeDark": "Donker",
     "themeSystem": "Systeem"
   },
+  "station": {
+    "title": "Tankstation",
+    "fuels": "Brandstoffen",
+    "noFuels": "Geen brandstoffen",
+    "noPrice": "Prijs onbekend",
+    "unavailable": "Niet beschikbaar",
+    "shortageTemporary": "Tijdelijk tekort",
+    "shortageDefinitive": "Definitief tekort",
+    "services": "Diensten",
+    "openingHours": "Openingstijden",
+    "automat24h": "24-uurs automaat beschikbaar",
+    "closed": "Gesloten",
+    "highway": "Snelweg",
+    "route": "Weg"
+  },
   "filters": {
     "fuel": "Brandstof",
     "title": "Filters",

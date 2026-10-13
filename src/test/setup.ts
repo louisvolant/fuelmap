@@ -52,6 +52,9 @@ vi.mock("maplibre-gl", () => {
     isStyleLoaded() {
       return true;
     }
+    getZoom() {
+      return 5;
+    }
     queryRenderedFeatures() {
       return [];
     }
