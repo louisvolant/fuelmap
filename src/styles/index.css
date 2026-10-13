@@ -1,7 +1,31 @@
-/* Global styles. Tailwind is added in a later milestone. */
+@import "tailwindcss";
+
+/* FuelMap design tokens. Dark mode is class-based to allow manual switching. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-fuel-gazole: #1f2937;
+  --color-fuel-sp95: #16a34a;
+  --color-fuel-sp98: #dc2626;
+  --color-fuel-e10: #2563eb;
+  --color-fuel-e85: #65a30d;
+  --color-fuel-gplc: #9333ea;
+}
+
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
+}
+
+/* Prevent iOS rubber-band scrolling behind the full-screen map. */
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* MapLibre attribution must remain readable over the map. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
 }
