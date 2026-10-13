@@ -53,12 +53,17 @@
     "hideShortages": "Tankstellen mit Engpässen ausblenden",
     "only24h": "Nur 24/7-Automaten",
     "services": "Services",
-    "noServices": "Keine Services verfügbar"
+    "noServices": "Keine Services verfügbar",
+    "radius": "Umkreis",
+    "radiusOff": "Alle",
+    "useMyLocation": "Meinen Standort verwenden"
   },
   "map": {
     "stations": "Tankstellen",
     "loadingStations": "Tankstellen werden geladen…",
-    "loadError": "Tankstellen konnten nicht geladen werden"
+    "loadError": "Tankstellen konnten nicht geladen werden",
+    "locate": "Mein Standort",
+    "locationDenied": "Standort verweigert"
   },
   "fuels": {
     "gazole": "Diesel",

@@ -1,6 +1,34 @@
 import { useTranslation } from "react-i18next";
 import { Sheet } from "@/components/ui/Sheet";
+import { formatDistance } from "@/lib/format";
 import { useFilterStore } from "@/stores/filterStore";
+import { useGeolocationStore } from "@/stores/geolocationStore";
+
+const RADIUS_OPTIONS_METERS = [1_000, 5_000, 10_000, 25_000, 50_000];
+
+interface RadiusChipProps {
+  active: boolean;
+  onClick: () => void;
+  children: string;
+}
+
+function RadiusChip({ active, onClick, children }: RadiusChipProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={[
+        "rounded-full px-3 py-1 text-xs font-medium",
+        active
+          ? "bg-sky-600 text-white"
+          : "border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
 interface FilterSheetProps {
   open: boolean;
@@ -32,14 +60,18 @@ function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
 
 /** Advanced filters: availability, 24/7 pump and services. */
 export function FilterSheet({ open, onClose, services }: FilterSheetProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const hideShortages = useFilterStore((state) => state.hideShortages);
   const only24h = useFilterStore((state) => state.only24h);
   const selectedServices = useFilterStore((state) => state.services);
+  const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
   const setHideShortages = useFilterStore((state) => state.setHideShortages);
   const setOnly24h = useFilterStore((state) => state.setOnly24h);
+  const setMaxDistance = useFilterStore((state) => state.setMaxDistance);
   const toggleService = useFilterStore((state) => state.toggleService);
   const reset = useFilterStore((state) => state.reset);
+  const position = useGeolocationStore((state) => state.position);
+  const locate = useGeolocationStore((state) => state.locate);
 
   return (
     <Sheet open={open} onClose={onClose} title={t("filters.title")}>
@@ -54,6 +86,37 @@ export function FilterSheet({ open, onClose, services }: FilterSheetProps) {
           checked={only24h}
           onChange={setOnly24h}
         />
+
+        <section className="pt-4">
+          <h3 className="mb-2 text-sm font-semibold">{t("filters.radius")}</h3>
+          {position === null ? (
+            <button
+              type="button"
+              onClick={locate}
+              className="rounded-full border border-sky-600 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 dark:border-sky-400 dark:text-sky-300 dark:hover:bg-sky-950"
+            >
+              {t("filters.useMyLocation")}
+            </button>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <RadiusChip
+                active={maxDistanceMeters === null}
+                onClick={() => setMaxDistance(null)}
+              >
+                {t("filters.radiusOff")}
+              </RadiusChip>
+              {RADIUS_OPTIONS_METERS.map((meters) => (
+                <RadiusChip
+                  key={meters}
+                  active={maxDistanceMeters === meters}
+                  onClick={() => setMaxDistance(meters)}
+                >
+                  {formatDistance(meters, i18n.language)}
+                </RadiusChip>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="pt-4">
           <h3 className="mb-2 text-sm font-semibold">{t("filters.services")}</h3>

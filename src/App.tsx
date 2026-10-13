@@ -10,6 +10,8 @@ import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
 import { StationSheet } from "@/components/station/StationSheet";
+import { LocateButton } from "@/components/map/LocateButton";
+import { UserLocationLayer } from "@/components/map/UserLocationLayer";
 import { getCountry } from "@/countries";
 import {
   useActiveFuelId,
@@ -20,13 +22,20 @@ import { collectServices } from "@/lib/filters";
 import { DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
+import { useFilterStore } from "@/stores/filterStore";
+import { useGeolocationStore } from "@/stores/geolocationStore";
 import { useUiStore } from "@/stores/uiStore";
 
 export default function App() {
   const countryCode = useCountryStore((state) => state.country);
   const country = getCountry(countryCode);
   const { data: stations } = useStations(countryCode);
-  const filteredStations = useFilteredStations(stations ?? []);
+  const userPosition = useGeolocationStore((state) => state.position);
+  const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
+  const filteredStations = useFilteredStations(stations ?? [], {
+    center: userPosition ?? undefined,
+    maxDistanceMeters: maxDistanceMeters ?? undefined,
+  });
   const activeFuelId = useActiveFuelId();
   const selectStation = useUiStore((state) => state.selectStation);
   const selectedStationId = useUiStore((state) => state.selectedStationId);
@@ -75,13 +84,19 @@ export default function App() {
           onSelect={(id) => selectStation(id)}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-2 p-3">
+        <UserLocationLayer />
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-2 p-3">
           <FuelFilterBar />
           <div className="flex items-center gap-2">
             <FiltersButton />
             <FavoritesButton />
             <StationsStatus count={filteredStations.length} />
           </div>
+        </div>
+
+        <div className="pointer-events-none absolute right-3 bottom-24 z-20 flex flex-col items-center gap-2">
+          <LocateButton />
         </div>
 
         <FilterSheet

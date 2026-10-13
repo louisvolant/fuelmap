@@ -53,12 +53,17 @@
     "hideShortages": "Ocultar gasolineras sin suministro",
     "only24h": "Solo surtidores 24 h",
     "services": "Servicios",
-    "noServices": "No hay servicios disponibles"
+    "noServices": "No hay servicios disponibles",
+    "radius": "Radio",
+    "radiusOff": "Todos",
+    "useMyLocation": "Usar mi ubicación"
   },
   "map": {
     "stations": "Gasolineras",
     "loadingStations": "Cargando gasolineras…",
-    "loadError": "No se pudieron cargar las gasolineras"
+    "loadError": "No se pudieron cargar las gasolineras",
+    "locate": "Mi ubicación",
+    "locationDenied": "Ubicación denegada"
   },
   "fuels": {
     "gazole": "Diésel",

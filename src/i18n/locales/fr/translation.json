@@ -53,12 +53,17 @@
     "hideShortages": "Masquer les stations en rupture",
     "only24h": "Automate 24/24 uniquement",
     "services": "Services",
-    "noServices": "Aucun service disponible"
+    "noServices": "Aucun service disponible",
+    "radius": "Rayon",
+    "radiusOff": "Tous",
+    "useMyLocation": "Utiliser ma position"
   },
   "map": {
     "stations": "Stations",
     "loadingStations": "Chargement des stations…",
-    "loadError": "Impossible de charger les stations"
+    "loadError": "Impossible de charger les stations",
+    "locate": "Ma position",
+    "locationDenied": "Localisation refusée"
   },
   "fuels": {
     "gazole": "Gazole",

@@ -53,12 +53,17 @@
     "hideShortages": "Tankstations met tekorten verbergen",
     "only24h": "Alleen 24-uurs pompen",
     "services": "Diensten",
-    "noServices": "Geen diensten beschikbaar"
+    "noServices": "Geen diensten beschikbaar",
+    "radius": "Straal",
+    "radiusOff": "Alle",
+    "useMyLocation": "Mijn locatie gebruiken"
   },
   "map": {
     "stations": "Tankstations",
     "loadingStations": "Tankstations worden geladen…",
-    "loadError": "Tankstations konden niet worden geladen"
+    "loadError": "Tankstations konden niet worden geladen",
+    "locate": "Mijn locatie",
+    "locationDenied": "Locatie geweigerd"
   },
   "fuels": {
     "gazole": "Diesel",

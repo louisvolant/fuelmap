@@ -13,11 +13,14 @@ interface FilterState {
   only24h: boolean;
   /** Required services (the station must offer all of them). */
   services: string[];
+  /** Maximum distance from the user, in meters. `null` disables the radius. */
+  maxDistanceMeters: number | null;
 
   toggleFuel: (fuelId: string) => void;
   toggleService: (service: string) => void;
   setHideShortages: (value: boolean) => void;
   setOnly24h: (value: boolean) => void;
+  setMaxDistance: (value: number | null) => void;
   clearFuels: () => void;
   reset: () => void;
 }
@@ -29,6 +32,7 @@ export const useFilterStore = create<FilterState>()(
       hideShortages: false,
       only24h: false,
       services: [],
+      maxDistanceMeters: null,
 
       toggleFuel: (fuelId) =>
         set((state) => ({
@@ -44,6 +48,7 @@ export const useFilterStore = create<FilterState>()(
         })),
       setHideShortages: (hideShortages) => set({ hideShortages }),
       setOnly24h: (only24h) => set({ only24h }),
+      setMaxDistance: (maxDistanceMeters) => set({ maxDistanceMeters }),
       clearFuels: () => set({ selectedFuelIds: [] }),
       reset: () =>
         set({
@@ -51,6 +56,7 @@ export const useFilterStore = create<FilterState>()(
           hideShortages: false,
           only24h: false,
           services: [],
+          maxDistanceMeters: null,
         }),
     }),
     { name: "fuelmap.filters" },
@@ -62,6 +68,7 @@ export function countActiveFilters(state: FilterState): number {
   return (
     (state.hideShortages ? 1 : 0) +
     (state.only24h ? 1 : 0) +
-    (state.services.length > 0 ? 1 : 0)
+    (state.services.length > 0 ? 1 : 0) +
+    (state.maxDistanceMeters !== null ? 1 : 0)
   );
 }

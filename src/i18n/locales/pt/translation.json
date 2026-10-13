@@ -53,12 +53,17 @@
     "hideShortages": "Ocultar postos sem combustível",
     "only24h": "Apenas bombas 24 h",
     "services": "Serviços",
-    "noServices": "Sem serviços disponíveis"
+    "noServices": "Sem serviços disponíveis",
+    "radius": "Raio",
+    "radiusOff": "Todos",
+    "useMyLocation": "Usar a minha localização"
   },
   "map": {
     "stations": "Postos",
     "loadingStations": "A carregar os postos…",
-    "loadError": "Não foi possível carregar os postos"
+    "loadError": "Não foi possível carregar os postos",
+    "locate": "A minha localização",
+    "locationDenied": "Localização recusada"
   },
   "fuels": {
     "gazole": "Gasóleo",

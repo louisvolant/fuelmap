@@ -53,12 +53,17 @@
     "hideShortages": "Nascondi i distributori senza carburante",
     "only24h": "Solo self 24 h",
     "services": "Servizi",
-    "noServices": "Nessun servizio disponibile"
+    "noServices": "Nessun servizio disponibile",
+    "radius": "Raggio",
+    "radiusOff": "Tutti",
+    "useMyLocation": "Usa la mia posizione"
   },
   "map": {
     "stations": "Distributori",
     "loadingStations": "Caricamento distributori…",
-    "loadError": "Impossibile caricare i distributori"
+    "loadError": "Impossibile caricare i distributori",
+    "locate": "La mia posizione",
+    "locationDenied": "Posizione negata"
   },
   "fuels": {
     "gazole": "Gasolio",
