@@ -19,6 +19,14 @@
     "themeDark": "Темна",
     "themeSystem": "Системна"
   },
+  "fuels": {
+    "gazole": "Дизель",
+    "sp95": "SP95",
+    "sp98": "SP98",
+    "e10": "E10",
+    "e85": "E85",
+    "gplc": "GPLc"
+  },
   "errors": {
     "generic": "Сталася помилка",
     "offline": "Ви офлайн"

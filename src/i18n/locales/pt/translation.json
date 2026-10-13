@@ -19,6 +19,14 @@
     "themeDark": "Escuro",
     "themeSystem": "Sistema"
   },
+  "fuels": {
+    "gazole": "Gasóleo",
+    "sp95": "SP95",
+    "sp98": "SP98",
+    "e10": "E10",
+    "e85": "E85",
+    "gplc": "GPLc"
+  },
   "errors": {
     "generic": "Ocorreu um erro",
     "offline": "Está offline"

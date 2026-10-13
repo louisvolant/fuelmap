@@ -19,6 +19,14 @@
     "themeDark": "Oscuro",
     "themeSystem": "Sistema"
   },
+  "fuels": {
+    "gazole": "Diésel",
+    "sp95": "SP95",
+    "sp98": "SP98",
+    "e10": "E10",
+    "e85": "E85",
+    "gplc": "GPLc"
+  },
   "errors": {
     "generic": "Se ha producido un error",
     "offline": "Estás sin conexión"
