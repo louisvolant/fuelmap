@@ -33,6 +33,11 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Kaarten"
   },
+  "history": {
+    "title": "Tankgeschiedenis",
+    "description": "Volg uw tankbeurten en besparingen met FuelStats, een externe dienst.",
+    "open": "FuelStats openen"
+  },
   "route": {
     "title": "Route",
     "chooseDestination": "Tik op de kaart om de bestemming te kiezen",

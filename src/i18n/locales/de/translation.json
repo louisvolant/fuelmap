@@ -33,6 +33,11 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Karten"
   },
+  "history": {
+    "title": "Tankhistorie",
+    "description": "Verfolgen Sie Ihre Tankvorgänge und Ersparnisse mit FuelStats, einem externen Dienst.",
+    "open": "FuelStats öffnen"
+  },
   "route": {
     "title": "Route",
     "chooseDestination": "Tippen Sie auf die Karte, um das Ziel zu wählen",

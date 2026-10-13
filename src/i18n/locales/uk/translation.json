@@ -33,6 +33,11 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Карти Apple"
   },
+  "history": {
+    "title": "Історія заправок",
+    "description": "Відстежуйте свої заправки та економію з FuelStats, зовнішнім сервісом.",
+    "open": "Відкрити FuelStats"
+  },
   "route": {
     "title": "Маршрут",
     "chooseDestination": "Торкніться карти, щоб вибрати пункт призначення",

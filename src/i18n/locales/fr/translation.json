@@ -33,6 +33,11 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Plans"
   },
+  "history": {
+    "title": "Historique des pleins",
+    "description": "Suivez vos pleins et vos économies avec FuelStats, un service externe.",
+    "open": "Ouvrir FuelStats"
+  },
   "route": {
     "title": "Itinéraire",
     "chooseDestination": "Touchez la carte pour choisir la destination",

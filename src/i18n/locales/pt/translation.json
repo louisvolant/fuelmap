@@ -33,6 +33,11 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas Apple"
   },
+  "history": {
+    "title": "Histórico de abastecimentos",
+    "description": "Registe os seus abastecimentos e poupanças com o FuelStats, um serviço externo.",
+    "open": "Abrir o FuelStats"
+  },
   "route": {
     "title": "Rota",
     "chooseDestination": "Toque no mapa para escolher o destino",

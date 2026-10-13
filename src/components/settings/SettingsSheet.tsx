@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Sheet } from "@/components/ui/Sheet";
 import { CountrySwitcher } from "./CountrySwitcher";
+import { HistoryLink } from "./HistoryLink";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
@@ -28,6 +29,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           <h3 className="mb-2 text-sm font-semibold">{t("common.language")}</h3>
           <LanguageSwitcher />
         </section>
+        <HistoryLink />
       </div>
     </Sheet>
   );
