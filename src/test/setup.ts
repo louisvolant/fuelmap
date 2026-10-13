@@ -25,11 +25,35 @@ vi.mock("maplibre-gl", () => {
     off() {
       return this;
     }
+    once() {
+      return this;
+    }
     remove() {}
     setStyle() {
       return this;
     }
     addControl() {
+      return this;
+    }
+    addSource() {
+      return this;
+    }
+    addLayer() {
+      return this;
+    }
+    getSource() {
+      return undefined;
+    }
+    getLayer() {
+      return undefined;
+    }
+    isStyleLoaded() {
+      return true;
+    }
+    queryRenderedFeatures() {
+      return [];
+    }
+    easeTo() {
       return this;
     }
     getCanvas() {
