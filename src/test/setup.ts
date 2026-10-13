@@ -73,6 +73,13 @@ vi.mock("maplibre-gl", () => {
     }
   }
 
-  const maplibre = { Map, NavigationControl, ScaleControl, Marker, Popup };
+  const maplibre = {
+    Map,
+    NavigationControl,
+    ScaleControl,
+    Marker,
+    Popup,
+    setWorkerUrl: () => {},
+  };
   return { ...maplibre, default: maplibre };
 });
