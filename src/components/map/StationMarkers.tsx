@@ -2,11 +2,17 @@ import { useEffect, useMemo, useRef } from "react";
 import type { FeatureCollection, Point } from "geojson";
 import type { GeoJSONSource, MapLayerMouseEvent } from "maplibre-gl";
 import type { NormalizedStation } from "@/countries/types";
-import { ensureBrandImages } from "@/lib/brandImages";
+import {
+  ensureBrandImages,
+  ensurePricePillImage,
+  PRICE_PILL_IMAGE_ID,
+} from "@/lib/brandImages";
 import { matchBrand, type BrandId } from "@/lib/brands";
 import { useMap } from "./MapContext";
 import {
-  PRICE_LABEL_MIN_ZOOM,
+  CLUSTER_MAX_ZOOM,
+  LOGO_MIN_ZOOM,
+  PRICE_MIN_ZOOM,
   STATION_LAYERS,
   stationsToFeatureCollection,
 } from "./stationLayers";
@@ -29,10 +35,16 @@ interface StationMarkersProps {
 }
 
 /**
- * Renders stations as a clustered GeoJSON layer on the map.
- * Prices are only shown from `PRICE_LABEL_MIN_ZOOM` to avoid clutter.
- * The component is resilient to basemap style swaps (theme changes) by
- * re-adding its source and layers on `styledata`.
+ * Renders stations as a clustered GeoJSON layer.
+ *
+ * Marker anatomy, zoom by zoom:
+ * - clustered dots at country scale;
+ * - from `LOGO_MIN_ZOOM`: a round white bubble holding the brand mark;
+ * - from `PRICE_MIN_ZOOM`: the bubble opens into a capsule — brand mark on the
+ *   left, price in a rounded capsule right behind it.
+ *
+ * The component is resilient to basemap style swaps: sources, layers **and
+ * images** (which live inside the style) are re-injected on `styledata`/`idle`.
  */
 export function StationMarkers({
   stations,
@@ -56,8 +68,7 @@ export function StationMarkers({
     [stations, activeFuelId, favoriteIds],
   );
 
-  // Track the brands currently displayed, and register their SVG marks
-  // (idempotent; `ensureLayers` also re-registers them after a style swap).
+  // Track the brands currently displayed, and register their SVG marks.
   useEffect(() => {
     const ids = new Set<BrandId>();
     for (const station of stations) {
@@ -72,7 +83,7 @@ export function StationMarkers({
     dataRef.current = data;
   }, [data]);
 
-  // Create source and layers, and (re)bind interactions.
+  // Create sources, images and layers, and (re)bind interactions.
   useEffect(() => {
     if (!map) return;
 
@@ -89,7 +100,7 @@ export function StationMarkers({
             data: dataRef.current,
             cluster: true,
             clusterRadius: 50,
-            clusterMaxZoom: 13,
+            clusterMaxZoom: CLUSTER_MAX_ZOOM,
           });
         }
 
@@ -124,6 +135,7 @@ export function StationMarkers({
           });
         }
 
+        // The bubble: a round white disc holding the brand mark.
         if (!map.getLayer(POINT_LAYER)) {
           map.addLayer({
             id: POINT_LAYER,
@@ -132,19 +144,47 @@ export function StationMarkers({
             filter: ["!", ["has", "point_count"]],
             paint: {
               "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
-              "circle-radius": 18,
+              "circle-radius": 15,
               "circle-stroke-width": 2,
               "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
             },
           });
         }
 
+        // Price: a rounded capsule right behind the bubble (from PRICE_MIN_ZOOM).
+        if (!map.getLayer(LABEL_LAYER)) {
+          map.addLayer({
+            id: LABEL_LAYER,
+            type: "symbol",
+            source: SOURCE_ID,
+            minzoom: PRICE_MIN_ZOOM,
+            filter: [
+              "all",
+              ["!", ["has", "point_count"]],
+              ["==", ["get", "hasPrice"], true],
+            ],
+            layout: {
+              "icon-image": PRICE_PILL_IMAGE_ID,
+              "icon-text-fit": "both",
+              "icon-text-fit-padding": [3, 7, 3, 7],
+              "icon-allow-overlap": true,
+              "text-field": ["get", "priceLabel"],
+              "text-size": 11,
+              "text-anchor": "left",
+              "text-offset": [1.5, 0],
+              "text-allow-overlap": true,
+            },
+            paint: { "text-color": "#0f172a" },
+          });
+        }
+
+        // Brand mark, drawn above the bubble and the price capsule.
         if (!map.getLayer(BRAND_LAYER)) {
           map.addLayer({
             id: BRAND_LAYER,
             type: "symbol",
             source: SOURCE_ID,
-            minzoom: PRICE_LABEL_MIN_ZOOM,
+            minzoom: LOGO_MIN_ZOOM,
             filter: [
               "all",
               ["!", ["has", "point_count"]],
@@ -155,42 +195,14 @@ export function StationMarkers({
               "icon-size": 0.5,
               "icon-allow-overlap": true,
               "icon-anchor": "center",
-              "icon-offset": [0, -8],
             },
-          });
-        }
-
-        if (!map.getLayer(LABEL_LAYER)) {
-          map.addLayer({
-            id: LABEL_LAYER,
-            type: "symbol",
-            source: SOURCE_ID,
-            minzoom: PRICE_LABEL_MIN_ZOOM,
-            filter: [
-              "all",
-              ["!", ["has", "point_count"]],
-              ["==", ["get", "hasPrice"], true],
-            ],
-            layout: {
-              "text-field": ["get", "priceLabel"],
-              "text-size": 10,
-              "text-anchor": "center",
-              // Sit under the brand mark when there is one, otherwise centered.
-              "text-offset": [
-                "case",
-                ["!=", ["get", "brandImage"], ""],
-                ["literal", [0, 0.85]],
-                ["literal", [0, 0]],
-              ],
-              "text-allow-overlap": true,
-            },
-            paint: { "text-color": "#0f172a" },
           });
         }
 
         applyData();
 
-        // Brand marks belong to the style: re-register them after a style swap.
+        // Images belong to the style: re-register them after a style swap.
+        void ensurePricePillImage(map);
         if (brandIdsRef.current.size > 0) {
           void ensureBrandImages(map, brandIdsRef.current);
         }
@@ -232,29 +244,27 @@ export function StationMarkers({
       map.getCanvas().style.cursor = "";
     };
 
+    const interactiveLayers = [CLUSTER_LAYER, POINT_LAYER, BRAND_LAYER, LABEL_LAYER];
+
     map.on("click", CLUSTER_LAYER, handleClusterClick);
-    map.on("click", POINT_LAYER, handlePointClick);
-    map.on("click", BRAND_LAYER, handlePointClick);
+    for (const layer of [POINT_LAYER, BRAND_LAYER, LABEL_LAYER]) {
+      map.on("click", layer, handlePointClick);
+      map.on("mouseenter", layer, setPointer);
+      map.on("mouseleave", layer, clearPointer);
+    }
     map.on("mouseenter", CLUSTER_LAYER, setPointer);
     map.on("mouseleave", CLUSTER_LAYER, clearPointer);
-    map.on("mouseenter", POINT_LAYER, setPointer);
-    map.on("mouseleave", POINT_LAYER, clearPointer);
-    map.on("mouseenter", BRAND_LAYER, setPointer);
-    map.on("mouseleave", BRAND_LAYER, clearPointer);
 
     return () => {
       map.off("load", ensureLayers);
       map.off("styledata", ensureLayers);
       map.off("idle", ensureLayers);
       map.off("click", CLUSTER_LAYER, handleClusterClick);
-      map.off("click", POINT_LAYER, handlePointClick);
-      map.off("click", BRAND_LAYER, handlePointClick);
-      map.off("mouseenter", CLUSTER_LAYER, setPointer);
-      map.off("mouseleave", CLUSTER_LAYER, clearPointer);
-      map.off("mouseenter", POINT_LAYER, setPointer);
-      map.off("mouseleave", POINT_LAYER, clearPointer);
-      map.off("mouseenter", BRAND_LAYER, setPointer);
-      map.off("mouseleave", BRAND_LAYER, clearPointer);
+      for (const layer of interactiveLayers) {
+        map.off("click", layer, handlePointClick);
+        map.off("mouseenter", layer, setPointer);
+        map.off("mouseleave", layer, clearPointer);
+      }
     };
   }, [map]);
 

@@ -1,4 +1,8 @@
 import { create } from "zustand";
+import {
+  markGeolocationGranted,
+  writeLastPosition,
+} from "@/lib/geolocationStorage";
 
 export type GeolocationStatus =
   | "idle"
@@ -34,13 +38,15 @@ export const useGeolocationStore = create<GeolocationState>((set) => ({
     set({ status: "locating" });
     navigator.geolocation.getCurrentPosition(
       (result) => {
-        try {
-          localStorage.setItem("fuelmap.geoGranted", "1");
-        } catch {
-          // Ignore storage errors.
-        }
+        const position: [number, number] = [
+          result.coords.longitude,
+          result.coords.latitude,
+        ];
+        // Remember it so the app can open around the user on the next reload.
+        writeLastPosition(position);
+        markGeolocationGranted();
         set({
-          position: [result.coords.longitude, result.coords.latitude],
+          position,
           accuracy: result.coords.accuracy,
           status: "granted",
         });

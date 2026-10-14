@@ -3,11 +3,16 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import type { CountryCode } from "@/countries/types";
 import { boundingBox } from "@/lib/geo";
 import { fetchGeoIp } from "@/lib/geoIp";
+import {
+  isGeolocationMarkedGranted,
+  markGeolocationGranted,
+  readLastPosition,
+  writeLastPosition,
+} from "@/lib/geolocationStorage";
 import { useGeolocationStore } from "@/stores/geolocationStore";
 
 const INITIAL_RADIUS_M = 5_000;
 const MAX_INITIAL_ZOOM = 13;
-const GEO_GRANTED_KEY = "fuelmap.geoGranted";
 const VISITED_KEY = "fuelmap.visited";
 
 const SUPPORTED_COUNTRIES: CountryCode[] = [
@@ -26,20 +31,18 @@ export interface InitialCamera {
   source: "geolocation" | "ip";
 }
 
-/** Whether the browser will let us read the position without prompting. */
-async function isGeolocationGranted(): Promise<boolean> {
-  try {
-    if (localStorage.getItem(GEO_GRANTED_KEY) === "1") return true;
-  } catch {
-    // Ignore storage access errors (private mode).
-  }
+type PermissionState = "granted" | "denied" | "prompt" | "unsupported";
+
+/** Read the geolocation permission without prompting, when supported. */
+async function geolocationPermission(): Promise<PermissionState> {
   try {
     const status = await navigator.permissions?.query({
       name: "geolocation" as PermissionName,
     });
-    return status?.state === "granted";
+    return status?.state ?? "unsupported";
   } catch {
-    return false;
+    // Safari and some browsers do not support querying geolocation.
+    return "unsupported";
   }
 }
 
@@ -71,19 +74,38 @@ function markVisited(): void {
   try {
     localStorage.setItem(VISITED_KEY, "1");
   } catch {
-    // Ignore storage errors.
+    // Ignore.
   }
 }
 
 /**
  * Resolve where the app should open, in order of preference:
- * already-granted geolocation, then IP location, else `null` (country default).
- * Never triggers a permission prompt.
+ * 1. the last known position (instant, no prompt, survives reloads),
+ * 2. a fresh geolocation fix when the browser will not prompt,
+ * 3. the IP-based location,
+ * 4. `null` (country default).
  */
 export async function resolveInitialCamera(): Promise<InitialCamera | null> {
-  if (await isGeolocationGranted()) {
+  const remembered = readLastPosition();
+  if (remembered) {
+    return { center: remembered, country: null, source: "geolocation" };
+  }
+
+  const permission = await geolocationPermission();
+  const mayLocate =
+    permission === "granted" ||
+    isGeolocationMarkedGranted() ||
+    // No Permissions API (Safari): the browser resolves silently if the user
+    // already allowed this site, and only prompts otherwise.
+    permission === "unsupported";
+
+  if (mayLocate) {
     const position = await getCurrentPosition();
-    if (position) return { center: position, country: null, source: "geolocation" };
+    if (position) {
+      writeLastPosition(position);
+      markGeolocationGranted();
+      return { center: position, country: null, source: "geolocation" };
+    }
   }
 
   try {
@@ -105,8 +127,8 @@ export async function resolveInitialCamera(): Promise<InitialCamera | null> {
 }
 
 /**
- * Fit the map around the user on first open. Runs once, never overrides the
- * camera afterwards, and never prompts for geolocation.
+ * Fit the map around the user on first open. Runs once and never overrides the
+ * camera afterwards.
  */
 export function useInitialView(
   map: MapLibreMap | null,

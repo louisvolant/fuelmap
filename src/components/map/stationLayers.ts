@@ -11,8 +11,12 @@ const POINT_LAYER = "station-points";
 const BRAND_LAYER = "station-brands";
 const LABEL_LAYER = "station-price-labels";
 
-/** Zoom level from which individual prices are shown instead of clusters. */
-export const PRICE_LABEL_MIN_ZOOM = 11;
+/** Zoom from which individual markers (and their brand marks) are shown. */
+export const LOGO_MIN_ZOOM = 12.5;
+/** Zoom from which the price is shown next to the brand mark. */
+export const PRICE_MIN_ZOOM = 13.5;
+/** Zoom up to which stations are clustered. */
+export const CLUSTER_MAX_ZOOM = 12;
 
 export interface StationFeatureProperties {
   id: string;

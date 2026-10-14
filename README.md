@@ -23,9 +23,11 @@ French government fuel-price open data.
   and Spain. Each brings its own fuel catalog and price source. Belgium and
   Luxembourg only publish a regulated **national maximum price**; Switzerland
   has station positions (OpenStreetMap) without prices.
-- 🏷️ **Brand logos on markers** — a round brand mark is shown on each price
-  bubble (TotalEnergies, Esso, E.Leclerc, Carrefour, Avia, Système U,
-  Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan, Match, Cora, BP).
+- 🏷️ **Brand mark on every bubble** — from zoom 12.5 each station is a round
+  white bubble with its brand mark (TotalEnergies, Esso, E.Leclerc, Carrefour,
+  Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
+  Match, Cora, BP). From zoom 13.5 the bubble opens into a capsule: mark on the
+  left, the selected fuel's price in a rounded capsule right behind it.
 - ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
 - 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
   **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
@@ -33,7 +35,8 @@ French government fuel-price open data.
 - 📋 **Sortable list** — stations ranked by price or by distance.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
   the stations along the driving route.
-- 💶 **Prices on markers** — the selected fuel's price, shown from a given zoom.
+- 💶 **Prices on markers** — the selected fuel's price, in a rounded capsule
+  right of the brand mark, from zoom 13.5.
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.
 - 🧭 **Navigation hand-off** — one tap to **Waze**, **Google Maps** or **Apple Maps**.
