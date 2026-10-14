@@ -68,6 +68,7 @@ export async function waitForStations(page: Page): Promise<void> {
 
 /** Move the camera over Paris at a zoom where markers are unclustered. */
 export async function focusParis(page: Page, zoom = 15): Promise<void> {
+  await waitForMap(page);
   await page.evaluate((value) => {
     const map = (
       window as unknown as {

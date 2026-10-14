@@ -26,3 +26,13 @@ not_found_handling = "single-page-application"
 # Non-secret configuration. Values overridable from the dashboard.
 [vars]
 TANKERKOENIG_API_URL = "https://creativecommons.tankerkoenig.de/json/list.php"
+BRANDFETCH_API_URL = "https://api.brandfetch.io/v2/brands"
+
+# Brand logos are snapshotted from the Brandfetch Brand API into R2.
+# Brandfetch's terms allow caching for 30 days; the cron refreshes twice a month.
+[[r2_buckets]]
+binding = "BRANDS_BUCKET"
+bucket_name = "fuelmap-bucket"
+
+[triggers]
+crons = ["0 4 1,16 * *"]

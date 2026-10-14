@@ -1,5 +1,6 @@
 import { test as base } from "@playwright/test";
 import { mockBasemap } from "./mockBasemap";
+import { mockBrandManifest } from "./mockBrandLogos";
 import { mockOsmStations } from "./mockOsmStations";
 
 /**
@@ -17,6 +18,8 @@ export const test = base.extend({
   page: async ({ page }, run) => {
     await mockBasemap(page);
     await mockOsmStations(page);
+    // No brand logo snapshot by default: specs fall back to the bundled marks.
+    await mockBrandManifest(page);
     await run(page);
   },
 });

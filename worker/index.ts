@@ -18,6 +18,12 @@ import {
   parseBelgianMaxPrices,
   parseLuxembourgMaxPrices,
 } from "../src/lib/maxPrices";
+import {
+  BRANDFETCH_DOMAINS,
+  logoContentType,
+  pickBrandfetchLogo,
+  type BrandfetchBrand,
+} from "../src/lib/brandfetch";
 
 interface AssetsBinding {
   fetch(request: Request): Promise<Response>;
@@ -28,6 +34,127 @@ interface ExecutionContextLike {
   waitUntil(promise: Promise<unknown>): void;
 }
 
+/**
+ * Brand logos: snapshotted from the Brandfetch Brand API into R2.
+ *
+ * Brandfetch resolves brands by domain and its terms allow caching the assets
+ * for 30 days, with a required refresh at least every 30 days. The cron in
+ * `wrangler.toml` refreshes twice a month, so the licence never lapses.
+ */
+const BRAND_LOGO_PREFIX = "brands-logo/";
+const BRAND_LOGO_MANIFEST = `${BRAND_LOGO_PREFIX}manifest.json`;
+
+interface BrandRefreshResult {
+  id: string;
+  status: string;
+  name?: string;
+  domain?: string;
+  format?: string;
+  type?: string;
+}
+
+/** Fetch every brand from Brandfetch and snapshot the best logo into R2. */
+async function refreshBrandLogos(env: Env): Promise<BrandRefreshResult[]> {
+  const base = env.BRANDFETCH_API_URL ?? "https://api.brandfetch.io/v2/brands";
+  const results: BrandRefreshResult[] = [];
+
+  for (const [id, domain] of Object.entries(BRANDFETCH_DOMAINS)) {
+    try {
+      const response = await fetch(`${base}/${encodeURIComponent(domain)}`, {
+        headers: {
+          authorization: `Bearer ${env.BRANDFETCH_API_KEY ?? ""}`,
+          accept: "application/json",
+        },
+      });
+      if (!response.ok) {
+        results.push({ id, status: `api_${response.status}`, domain });
+        continue;
+      }
+
+      const brand = (await response.json()) as BrandfetchBrand;
+      const logo = pickBrandfetchLogo(brand);
+      if (!logo) {
+        results.push({ id, status: "no_logo", name: brand.name, domain });
+        continue;
+      }
+
+      const asset = await fetch(logo.src);
+      if (!asset.ok) {
+        results.push({
+          id,
+          status: `asset_${asset.status}`,
+          name: brand.name,
+          domain,
+        });
+        continue;
+      }
+
+      await env.BRANDS_BUCKET.put(
+        `${BRAND_LOGO_PREFIX}${id}`,
+        await asset.arrayBuffer(),
+        {
+          httpMetadata: {
+            contentType: logoContentType(logo.format),
+            cacheControl: "public, max-age=31536000, immutable",
+          },
+        },
+      );
+      results.push({
+        id,
+        status: "ok",
+        name: brand.name,
+        domain,
+        format: logo.format,
+        type: logo.type,
+      });
+    } catch {
+      results.push({ id, status: "error", domain });
+    }
+  }
+
+  await env.BRANDS_BUCKET.put(
+    BRAND_LOGO_MANIFEST,
+    JSON.stringify({ at: Date.now(), brands: results }),
+    {
+      httpMetadata: {
+        contentType: "application/json; charset=utf-8",
+        cacheControl: "public, max-age=3600",
+      },
+    },
+  );
+
+  return results;
+}
+
+/** Serve a snapshotted brand logo (`/brands/<id>`) or the manifest. */
+async function handleBrandAsset(pathname: string, env: Env): Promise<Response> {
+  const name = pathname.slice("/brands/".length);
+  if (!/^[a-z0-9.-]+$/.test(name)) {
+    return json({ message: "invalid brand id" }, 400);
+  }
+
+  if (name === "manifest.json") {
+    const manifest = await env.BRANDS_BUCKET.get(BRAND_LOGO_MANIFEST);
+    if (!manifest) return json({ at: null, brands: [] });
+    return new Response(manifest.body, {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+      },
+    });
+  }
+
+  const object = await env.BRANDS_BUCKET.get(`${BRAND_LOGO_PREFIX}${name}`);
+  if (!object) return json({ message: "unknown brand logo" }, 404);
+
+  return new Response(object.body, {
+    headers: {
+      "content-type": object.httpMetadata?.contentType ?? "image/svg+xml",
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
 /** Cloudflare geography attached to an incoming request. */
 interface RequestCf {
   country?: string;
@@ -36,12 +163,33 @@ interface RequestCf {
   longitude?: string;
 }
 
+/** Minimal Cloudflare R2 bucket. */
+interface R2ObjectBodyLike {
+  body: ReadableStream;
+  httpMetadata?: { contentType?: string };
+}
+
+interface R2BucketLike {
+  get(key: string): Promise<R2ObjectBodyLike | null>;
+  put(
+    key: string,
+    value: ArrayBuffer | string,
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
+  ): Promise<unknown>;
+}
+
 export interface Env {
   ASSETS: AssetsBinding;
   /** Tankerkönig API key (Worker secret). */
   TANKERKOENIG_API_KEY?: string;
   /** Upstream Tankerkönig endpoint (overridable via `[vars]`). */
   TANKERKOENIG_API_URL?: string;
+  /** R2 bucket holding the snapshotted brand logos. */
+  BRANDS_BUCKET: R2BucketLike;
+  /** Brandfetch Brand API key (Worker secret). */
+  BRANDFETCH_API_KEY?: string;
+  /** Brandfetch Brand API base URL (overridable via `[vars]`). */
+  BRANDFETCH_API_URL?: string;
 }
 
 // Cloudflare's Cache API (not part of the standard lib DOM typings here).
@@ -336,7 +484,20 @@ export default {
       return handleGeo(request);
     }
 
+    if (url.pathname.startsWith("/brands/")) {
+      return handleBrandAsset(url.pathname, env);
+    }
+
     // Everything else is the single-page app.
     return env.ASSETS.fetch(request);
+  },
+
+  /** Cron trigger: refresh the Brandfetch logo snapshots twice a month. */
+  async scheduled(
+    _event: unknown,
+    env: Env,
+    ctx: ExecutionContextLike,
+  ): Promise<void> {
+    ctx.waitUntil(refreshBrandLogos(env));
   },
 };

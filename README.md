@@ -99,6 +99,32 @@ lightweight and fit inside a circular marker. To use official logos, replace the
 matching file (same name, 64×64 viewBox) — nothing else needs to change. Brand
 matching is alias-based (`src/lib/brands.ts`).
 
+#### Official logos (Brandfetch → R2)
+
+Real brand logos are snapshotted from the **Brandfetch Brand API** (the only
+Brandfetch product whose terms allow caching) and served from R2:
+
+- `src/lib/brandfetch.ts` holds the reviewable **name → domain** table and the
+  asset-picking rules (icon → light theme → SVG, square-ish preferred).
+- The Worker's **cron trigger** (`0 4 1,16 * *`, twice a month) calls the Brand
+  API for every brand and stores the best asset in R2 under
+  `brands-logo/<brandId>`, plus `brands-logo/manifest.json`.
+  Brandfetch's terms grant a 30-day cache licence and require a refresh at least
+  every 30 days — twice a month keeps that satisfied.
+- The client prefers `/brands/<id>` and **falls back to the bundled mark** when a
+  snapshot is missing, so the app never depends on a third party at runtime and
+  still works offline.
+- Domains flagged `// verify` in `src/lib/brandfetch.ts` still need a visual
+  check (some brands exist in several countries: Netto FR/DE, Cora, Shell/BP).
+
+To refresh now: Cloudflare dashboard → Worker → **Cron Triggers → Trigger**, then
+open `/brands/manifest.json` to see the per-brand status (`ok`, `no_logo`,
+`api_404`, …).
+
+> **Trademarks.** Logos are the property of their respective owners and are used
+> here for identification only; this app is not affiliated with, nor endorsed by,
+> these brands.
+
 ### Italy
 
 - **Dataset:** *Prezzi praticati e anagrafica degli impianti* (MIMIT /
@@ -243,14 +269,20 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
    `GET /api/osm/stations` — OpenStreetMap fuel stations via Overpass, tried
    across mirrors and cached at the edge for a week (used for the French brand
    enrichment and for Belgian / Luxembourg / Swiss station positions), and
+   `GET /brands/<id>` + `GET /brands/manifest.json` — brand logos snapshotted
+   from the Brandfetch Brand API into R2 (see below).
    `GET /api/geo` — a coarse location derived from the client IP
    (Cloudflare `request.cf`), used when geolocation is not authorized.
 
-Set the key once as a Worker secret:
+Set the secrets once (they never ship to the browser):
 
 ```bash
-npx wrangler secret put TANKERKOENIG_API_KEY
+npx wrangler secret put TANKERKOENIG_API_KEY   # Germany (Tankerkönig)
+npx wrangler secret put BRANDFETCH_API_KEY     # official brand logos
 ```
+
+`wrangler.toml` also declares the **R2 bucket** holding the brand-logo snapshots
+(`BRANDS_BUCKET` → `fuelmap-bucket`) and the **cron trigger** that refreshes them.
 
 `wrangler.toml` sets **`keep_vars = true`** so environment variables configured
 in the dashboard survive every deploy.
