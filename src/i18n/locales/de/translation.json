@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "Frankreich", "DE": "Deutschland", "ES": "Spanien", "IT": "Italien" },
+  "countries": { "FR": "Frankreich", "BE": "Belgien", "LU": "Luxemburg", "DE": "Deutschland", "CH": "Schweiz", "IT": "Italien", "ES": "Spanien" },
   "app": {
     "name": "FuelMap",
     "tagline": "Finden Sie den günstigsten Kraftstoff in Ihrer Nähe"
@@ -32,6 +32,11 @@
     "waze": "Waze",
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Karten"
+  },
+  "maxPrice": {
+    "title": "Offizieller Höchstpreis",
+    "note": "Regulierter Höchstpreis, identisch an allen Tankstellen. Preis je Tankstelle nicht verfügbar.",
+    "unavailable": "Höchstpreis nicht verfügbar"
   },
   "panel": {
     "moveLeft": "Links anzeigen",

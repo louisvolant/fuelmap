@@ -4,13 +4,31 @@ import { mockFuelApi } from "./support/mockFuelApi";
 import { mockSpainApi } from "./support/mockSpainApi";
 import { mockGermanyApi } from "./support/mockGermanyApi";
 import { mockItalyApi } from "./support/mockItalyApi";
+import { mockMaxPrices } from "./support/mockMaxPrices";
+import { mockOverpass } from "./support/mockOverpass";
 import { waitForStations } from "./support/map";
+
+// Two OSM fuel stations, returned for any bounding box.
+const OSM_STATIONS = [
+  {
+    lat: 50.8503,
+    lon: 4.3517,
+    tags: { name: "Total Brussels", brand: "Total", "addr:city": "Bruxelles" },
+  },
+  {
+    lat: 50.846,
+    lon: 4.36,
+    tags: { name: "Q8 Leuven", brand: "Q8", "addr:city": "Leuven" },
+  },
+];
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockSpainApi(page);
   await mockGermanyApi(page);
   await mockItalyApi(page);
+  await mockMaxPrices(page);
+  await mockOverpass(page, OSM_STATIONS);
   await page.goto("/");
   await waitForStations(page);
 });
@@ -44,6 +62,27 @@ test("switches to Italy and loads Italian stations", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Essence", exact: true }),
   ).toBeVisible();
+});
+
+test("switches to Belgium, loads OSM stations and shows the maximum prices", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Réglages" }).click();
+  await page.getByRole("combobox", { name: "Pays" }).selectOption("BE");
+
+  await expect(page.getByText(/Prix maximum officiel/)).toBeVisible();
+  await expect(page.getByText(/2,121/)).toBeVisible();
+  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+});
+
+test("switches to Switzerland with OpenStreetMap stations and no prices", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Réglages" }).click();
+  await page.getByRole("combobox", { name: "Pays" }).selectOption("CH");
+
+  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/Prix maximum officiel/)).toHaveCount(0);
 });
 
 test("resets the fuel filter when switching country", async ({ page }) => {

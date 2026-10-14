@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "France", "DE": "Allemagne", "ES": "Espagne", "IT": "Italie" },
+  "countries": { "FR": "France", "BE": "Belgique", "LU": "Luxembourg", "DE": "Allemagne", "CH": "Suisse", "IT": "Italie", "ES": "Espagne" },
   "app": {
     "name": "FuelMap",
     "tagline": "Trouvez le carburant le moins cher autour de vous"
@@ -32,6 +32,11 @@
     "waze": "Waze",
     "googleMaps": "Google Maps",
     "appleMaps": "Plans"
+  },
+  "maxPrice": {
+    "title": "Prix maximum officiel",
+    "note": "Prix plafond réglementé, identique dans toutes les stations. Prix par station non disponible.",
+    "unavailable": "Prix maximum indisponible"
   },
   "panel": {
     "moveLeft": "Afficher à gauche",

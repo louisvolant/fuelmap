@@ -14,6 +14,10 @@
  * are never wiped on deploy thanks to `keep_vars = true` in `wrangler.toml`.
  */
 import { parseItalianStations } from "../src/lib/italyFuel";
+import {
+  parseBelgianMaxPrices,
+  parseLuxembourgMaxPrices,
+} from "../src/lib/maxPrices";
 
 interface AssetsBinding {
   fetch(request: Request): Promise<Response>;
@@ -52,6 +56,12 @@ const ITALY_PREZZI_URL =
   "https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv";
 const ITALY_CACHE_KEY = "https://fuelmap.internal/api/it/stations";
 const ONE_HOUR = 60 * 60;
+
+/** Belgium: Statbel official (maximum) petroleum product rates as CSV. */
+const BELGIUM_MAX_PRICES_URL =
+  "https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/CSV";
+/** Luxembourg: official price table (first incl. VAT row is the current rate). */
+const LUXEMBOURG_MAX_PRICES_URL = "https://www.petrol.lu/prix-officiels/";
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -132,6 +142,49 @@ async function handleItalianStations(
 }
 
 /**
+ * Belgium / Luxembourg: official national maximum prices, parsed and cached.
+ */
+async function handleMaxPrices(
+  url: URL,
+  ctx: ExecutionContextLike,
+): Promise<Response> {
+  const country = (url.searchParams.get("country") ?? "").toUpperCase();
+  if (country !== "BE" && country !== "LU") {
+    return json({ message: "unsupported country" }, 400);
+  }
+
+  const cacheKey = new Request(
+    `https://fuelmap.internal/api/max-prices/${country}`,
+    { method: "GET" },
+  );
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return cached;
+
+  const source =
+    country === "BE"
+      ? { url: BELGIUM_MAX_PRICES_URL, parse: parseBelgianMaxPrices }
+      : { url: LUXEMBOURG_MAX_PRICES_URL, parse: parseLuxembourgMaxPrices };
+
+  const upstream = await fetch(source.url, {
+    headers: { accept: "text/csv,text/html;q=0.9,*/*;q=0.8" },
+  });
+  if (!upstream.ok) {
+    return json({ message: "price source unavailable" }, 502);
+  }
+
+  const response = json(source.parse(await upstream.text()));
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", `public, max-age=${ONE_HOUR}`);
+  ctx.waitUntil(
+    caches.default.put(
+      cacheKey,
+      new Response(response.clone().body, { status: 200, headers }),
+    ),
+  );
+  return response;
+}
+
+/**
  * Coarse location derived from the client IP address, using Cloudflare's
  * `request.cf`. Used as a fallback when geolocation is not authorized.
  */
@@ -162,6 +215,10 @@ export default {
 
     if (url.pathname === "/api/it/stations") {
       return handleItalianStations(ctx);
+    }
+
+    if (url.pathname === "/api/max-prices") {
+      return handleMaxPrices(url, ctx);
     }
 
     if (url.pathname === "/api/geo") {

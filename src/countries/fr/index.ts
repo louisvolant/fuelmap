@@ -12,6 +12,7 @@ export const france: CountryDefinition = {
   zoom: 5,
   bounds: [-5.5, 41.2, 9.9, 51.3],
   currency: "EUR",
+  priceMode: "station",
   fuelCatalog: FRENCH_FUELS,
   dataSource: FRANCE_DATA_SOURCE,
 };

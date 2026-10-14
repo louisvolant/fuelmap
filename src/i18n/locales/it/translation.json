@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "Francia", "DE": "Germania", "ES": "Spagna", "IT": "Italia" },
+  "countries": { "FR": "Francia", "BE": "Belgio", "LU": "Lussemburgo", "DE": "Germania", "CH": "Svizzera", "IT": "Italia", "ES": "Spagna" },
   "app": {
     "name": "FuelMap",
     "tagline": "Trova il carburante più economico vicino a te"
@@ -32,6 +32,11 @@
     "waze": "Waze",
     "googleMaps": "Google Maps",
     "appleMaps": "Mappe Apple"
+  },
+  "maxPrice": {
+    "title": "Prezzo massimo ufficiale",
+    "note": "Prezzo massimo regolamentato, identico in tutti i distributori. Prezzo per distributore non disponibile.",
+    "unavailable": "Prezzo massimo non disponibile"
   },
   "panel": {
     "moveLeft": "Mostra a sinistra",

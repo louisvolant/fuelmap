@@ -14,6 +14,8 @@ export function FuelFilterBar() {
   const selectedFuelIds = useFilterStore((state) => state.selectedFuelIds);
   const toggleFuel = useFilterStore((state) => state.toggleFuel);
 
+  if (country.fuelCatalog.length === 0) return null;
+
   return (
     <div
       role="group"

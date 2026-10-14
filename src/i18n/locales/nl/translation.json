@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "Frankrijk", "DE": "Duitsland", "ES": "Spanje", "IT": "Italië" },
+  "countries": { "FR": "Frankrijk", "BE": "België", "LU": "Luxemburg", "DE": "Duitsland", "CH": "Zwitserland", "IT": "Italië", "ES": "Spanje" },
   "app": {
     "name": "FuelMap",
     "tagline": "Vind de goedkoopste brandstof bij jou in de buurt"
@@ -32,6 +32,11 @@
     "waze": "Waze",
     "googleMaps": "Google Maps",
     "appleMaps": "Apple Kaarten"
+  },
+  "maxPrice": {
+    "title": "Officiële maximumprijs",
+    "note": "Gereguleerde maximumprijs, identiek bij alle tankstations. Prijs per tankstation niet beschikbaar.",
+    "unavailable": "Maximumprijs niet beschikbaar"
   },
   "panel": {
     "moveLeft": "Links weergeven",

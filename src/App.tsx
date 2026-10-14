@@ -13,6 +13,7 @@ import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
+import { MaxPriceBanner } from "@/components/price/MaxPriceBanner";
 import { RouteButton } from "@/components/route/RouteButton";
 import { RouteLayer } from "@/components/route/RouteLayer";
 import { RoutePanel } from "@/components/route/RoutePanel";
@@ -249,6 +250,7 @@ export default function App() {
             <SettingsButton />
           </div>
           <RoutePanel />
+          <MaxPriceBanner />
         </div>
 
         <div className="pointer-events-none absolute right-3 bottom-24 z-20 flex flex-col items-center gap-2">

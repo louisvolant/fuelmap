@@ -3,20 +3,28 @@ import { france } from "./fr";
 import { spain } from "./es";
 import { germany } from "./de";
 import { italy } from "./it";
+import { belgium } from "./be";
+import { luxembourg } from "./lu";
+import { switzerland } from "./ch";
 
 /**
  * Registry of enabled countries.
  *
- * Phase 1 shipped France. Spain and Germany are the phase-2 additions, chosen
- * because they border France and expose per-station price data. A country is
- * only listed here once its `FuelDataSource` adapter exists; the rest of the app
- * needs no change.
+ * France, Spain, Germany and Italy expose per-station prices. Belgium and
+ * Luxembourg only publish a regulated national maximum price; Switzerland has no
+ * price data at all — those three use OpenStreetMap for station positions.
+ *
+ * Adding a country only requires a `CountryDefinition` and, when relevant, a
+ * `FuelDataSource` adapter.
  */
 export const COUNTRIES: Partial<Record<CountryCode, CountryDefinition>> = {
   FR: france,
-  ES: spain,
+  BE: belgium,
+  LU: luxembourg,
   DE: germany,
+  CH: switzerland,
   IT: italy,
+  ES: spain,
 };
 
 export const DEFAULT_COUNTRY: CountryCode = "FR";

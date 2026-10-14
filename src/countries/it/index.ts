@@ -13,6 +13,7 @@ export const italy: CountryDefinition = {
   zoom: 5,
   bounds: [6.6, 36.6, 18.6, 47.1],
   currency: "EUR",
+  priceMode: "station",
   fuelCatalog: ITALIAN_FUELS,
   dataSource: ITALY_DATA_SOURCE,
 };

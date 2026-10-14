@@ -83,7 +83,11 @@ export function StationDetails({
       <section>
         <h3 className="mb-1 text-sm font-semibold">{t("station.fuels")}</h3>
         {sortedFuels.length === 0 ? (
-          <p className="text-sm text-slate-500">{t("station.noFuels")}</p>
+          <p className="text-sm text-slate-500">
+            {country.priceMode === "station"
+              ? t("station.noFuels")
+              : t("maxPrice.note")}
+          </p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {sortedFuels.map((fuel) => {

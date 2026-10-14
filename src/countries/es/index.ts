@@ -12,6 +12,7 @@ export const spain: CountryDefinition = {
   zoom: 5,
   bounds: [-9.3, 36.0, 3.4, 43.8],
   currency: "EUR",
+  priceMode: "station",
   fuelCatalog: SPANISH_FUELS,
   dataSource: SPAIN_DATA_SOURCE,
 };

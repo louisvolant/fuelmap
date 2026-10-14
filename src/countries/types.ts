@@ -145,8 +145,17 @@ export interface CountryDefinition {
   bounds: [number, number, number, number];
   /** ISO 4217 currency code used to format prices. */
   currency: string;
+  /**
+   * How prices are available for this country:
+   * - `"station"`: per-station prices (France, Spain, Germany, Italy).
+   * - `"national-max"`: only a regulated national maximum price (Belgium, Luxembourg).
+   * - `"none"`: no price data at all (Switzerland, OpenStreetMap only).
+   */
+  priceMode: PriceMode;
   /** Fuels available in this country; drives the filter UI. */
   fuelCatalog: FuelDefinition[];
   /** Pricing source, or `null` when only OSM positions are available. */
   dataSource: FuelDataSource | null;
 }
+
+export type PriceMode = "station" | "national-max" | "none";

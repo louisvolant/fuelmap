@@ -13,6 +13,7 @@ export const germany: CountryDefinition = {
   zoom: 5,
   bounds: [5.9, 47.3, 15.0, 55.1],
   currency: "EUR",
+  priceMode: "station",
   fuelCatalog: GERMAN_FUELS,
   dataSource: GERMANY_DATA_SOURCE,
 };
