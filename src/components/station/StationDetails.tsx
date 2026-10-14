@@ -9,6 +9,7 @@ import { formatDistance } from "@/lib/format";
 import { getFuel } from "@/lib/fuelCatalog";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { FuelPriceRow } from "./FuelPriceRow";
+import { BrandBadge } from "./BrandBadge";
 import { NavigationButtons } from "./NavigationButtons";
 import { OpeningHours } from "./OpeningHours";
 import { ServicesList } from "./ServicesList";
@@ -61,19 +62,26 @@ export function StationDetails({
   const content = (
     <div className="flex flex-col gap-5">
       <header>
-        {station.address && (
-          <p className="text-sm font-medium">{station.address}</p>
-        )}
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {[station.postalCode, station.city].filter(Boolean).join(" ")}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <span className={badgeClasses}>
-            {station.isHighway ? t("station.highway") : t("station.route")}
-          </span>
-          {distance !== undefined && (
-            <span className={badgeClasses}>{formatDistance(distance, locale)}</span>
-          )}
+        <div className="flex items-start gap-3">
+          <BrandBadge brand={station.brand} size={36} />
+          <div className="min-w-0 flex-1">
+            {station.address && (
+              <p className="text-sm font-medium">{station.address}</p>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {[station.postalCode, station.city].filter(Boolean).join(" ")}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className={badgeClasses}>
+                {station.isHighway ? t("station.highway") : t("station.route")}
+              </span>
+              {distance !== undefined && (
+                <span className={badgeClasses}>
+                  {formatDistance(distance, locale)}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
         <div className="mt-3">
           <FavoriteToggle stationId={station.id} country={station.country} />

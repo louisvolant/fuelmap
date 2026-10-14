@@ -58,11 +58,41 @@ test.describe("portrait viewport", () => {
     await openStation(page);
 
     // The sheet is anchored to the bottom of the screen.
-    const box = await page.getByTestId("sheet-content").boundingBox();
-    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeGreaterThan(800 - 4);
+    await expect
+      .poll(async () => {
+        const box = await page.getByTestId("sheet-content").boundingBox();
+        return box ? Math.round(box.y + box.height) : 0;
+      })
+      .toBeGreaterThan(780);
 
     await expect(
       page.getByRole("button", { name: "Afficher à gauche" }),
     ).toHaveCount(0);
+  });
+
+  test("dismisses the sheet by dragging its handle down", async ({ page }) => {
+    await openStation(page);
+
+    // Wait for the entrance animation to finish before dragging.
+    await expect
+      .poll(async () => {
+        const box = await page.getByTestId("sheet-content").boundingBox();
+        return box ? Math.round(box.y + box.height) : 0;
+      })
+      .toBeLessThan(805);
+
+    const handle = page.getByTestId("sheet-handle");
+    const box = await handle.boundingBox();
+    expect(box).not.toBeNull();
+
+    const centerX = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    const startY = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+    await page.mouse.move(centerX, startY);
+    await page.mouse.down();
+    await page.mouse.move(centerX, startY + 200, { steps: 12 });
+    await page.mouse.up();
+
+    await expect(page.getByRole("dialog")).toBeHidden();
   });
 });

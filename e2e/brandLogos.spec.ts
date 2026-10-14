@@ -2,7 +2,7 @@ import { expect, test } from "./support/fixtures";
 import { mockBrandLogo, mockBrandManifest } from "./support/mockBrandLogos";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockOsmStations } from "./support/mockOsmStations";
-import { focusParis, waitForStations } from "./support/map";
+import { focusParis, clickStation, waitForStations } from "./support/map";
 
 type TestMap = { hasImage: (id: string) => boolean };
 
@@ -61,4 +61,22 @@ test("falls back to the bundled mark when the snapshot is missing", async ({
 
   // The snapshot 404s, but the bundled SVG still provides the mark.
   await expect.poll(() => hasBrandImage(page)).toBe(true);
+});
+
+test("shows the brand badge in the station details", async ({ page }) => {
+  await mockBrandManifest(page, {
+    at: Date.now(),
+    brands: [{ id: "totalenergies", status: "ok" }],
+  });
+  await mockBrandLogo(page, "totalenergies");
+
+  await page.reload();
+  await waitForStations(page);
+  await focusParis(page);
+  await clickStation(page, "FR:75101001");
+
+  await expect(page.getByRole("dialog").getByRole("img")).toHaveAttribute(
+    "src",
+    /\/brands\/totalenergies$/,
+  );
 });

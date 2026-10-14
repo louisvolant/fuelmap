@@ -92,6 +92,32 @@ describe("StationDetails", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("shows the brand badge in the header", () => {
+    const branded: NormalizedStation = { ...station, brand: "Total" };
+    render(
+      <StationDetails
+        station={branded}
+        country={getCountry("FR")}
+        onClose={() => {}}
+      />,
+    );
+
+    const badge = screen.getByRole("img", { name: "Total" });
+    expect(badge.getAttribute("src")).toContain("/brands/totalenergies");
+  });
+
+  it("omits the badge when the brand is unknown", () => {
+    const unknown: NormalizedStation = { ...station, brand: "Station inconnue" };
+    render(
+      <StationDetails
+        station={unknown}
+        country={getCountry("FR")}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("shows the details in a side panel and can switch side", async () => {
     const user = userEvent.setup();
     useLayoutStore.setState({ panelSide: "right" });

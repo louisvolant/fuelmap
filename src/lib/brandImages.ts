@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { BRAND_SVGS } from "./brandSvgs";
+import { brandSvgDataUrl, BRANDS_BASE } from "./brandLogos";
 import { brandImageId, type BrandId } from "./brands";
 
 /**
@@ -8,10 +8,6 @@ import { brandImageId, type BrandId } from "./brands";
  * bundled SVG mark is used instead — the app never depends on a third party at
  * runtime.
  */
-const BRANDS_BASE =
-  import.meta.env.VITE_BRANDS_BASE_URL?.toString() ?? "/brands";
-
-/** Square size (in device pixels) every logo is rasterized to. */
 const LOGO_SIZE = 64;
 
 interface BrandManifest {
@@ -103,10 +99,7 @@ async function loadBrandLogo(
     image = await loadImage(`${BRANDS_BASE}/${id}`).catch(() => undefined);
   }
   if (!image) {
-    const svg = BRAND_SVGS[id];
-    image = await loadImage(
-      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    );
+    image = await loadImage(brandSvgDataUrl(id));
   }
 
   const imageData = toSquareImageData(image);
