@@ -1,5 +1,5 @@
 import { expect, test } from "./support/fixtures";
-import { mockBrandLogo, mockBrandManifest } from "./support/mockBrandLogos";
+import { mockBrandLogo } from "./support/mockBrandLogos";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockOsmStations } from "./support/mockOsmStations";
 import { focusParis, clickStation, waitForStations } from "./support/map";
@@ -30,10 +30,6 @@ test("prefers the snapshot served by the worker", async ({ page }) => {
     if (request.url().includes("/brands/")) requested.push(request.url());
   });
 
-  await mockBrandManifest(page, {
-    at: Date.now(),
-    brands: [{ id: "totalenergies", status: "ok" }],
-  });
   await mockBrandLogo(page, "totalenergies");
 
   await page.reload();
@@ -49,10 +45,6 @@ test("prefers the snapshot served by the worker", async ({ page }) => {
 test("falls back to the bundled mark when the snapshot is missing", async ({
   page,
 }) => {
-  await mockBrandManifest(page, {
-    at: Date.now(),
-    brands: [{ id: "totalenergies", status: "ok" }],
-  });
   await mockBrandLogo(page, "totalenergies", 404);
 
   await page.reload();
@@ -64,10 +56,6 @@ test("falls back to the bundled mark when the snapshot is missing", async ({
 });
 
 test("shows the brand badge in the station details", async ({ page }) => {
-  await mockBrandManifest(page, {
-    at: Date.now(),
-    brands: [{ id: "totalenergies", status: "ok" }],
-  });
   await mockBrandLogo(page, "totalenergies");
 
   await page.reload();

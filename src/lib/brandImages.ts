@@ -1,38 +1,18 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { brandSvgDataUrl, BRANDS_BASE } from "./brandLogos";
+import { brandSvgDataUrl, remoteBrandLogoUrl } from "./brandLogos";
 import { brandImageId, type BrandId } from "./brands";
 
 /**
  * Brand logos are served by the Worker from R2 (`/brands/<id>`), snapshotted
- * from the Brandfetch Brand API. When a brand is not available there, the
- * bundled SVG mark is used instead — the app never depends on a third party at
- * runtime.
+ * from the Brandfetch Brand API with a self-healing cache: a missing snapshot is
+ * fetched in the background and appears on the next load.
+ *
+ * The client therefore always *tries* the snapshot first and silently falls back
+ * to the bundled mark, so it never waits for a third party and works offline.
  */
 const LOGO_SIZE = 64;
 
-interface BrandManifest {
-  at: number | null;
-  brands: { id: string; status: string }[];
-}
-
 const imageDataCache = new Map<BrandId, ImageData>();
-let remoteBrandIdsPromise: Promise<Set<string>> | null = null;
-
-/** Brand ids that have a snapshot in R2 (empty when the Worker is absent). */
-function fetchRemoteBrandIds(): Promise<Set<string>> {
-  if (!remoteBrandIdsPromise) {
-    remoteBrandIdsPromise = fetch(`${BRANDS_BASE}/manifest.json`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((manifest: BrandManifest | null) => {
-        const ids = (manifest?.brands ?? [])
-          .filter((brand) => brand.status === "ok")
-          .map((brand) => brand.id);
-        return new Set(ids);
-      })
-      .catch(() => new Set<string>());
-  }
-  return remoteBrandIdsPromise;
-}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -44,10 +24,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /** Draw an image centred in a transparent square and return its pixels. */
-function toSquareImageData(
-  image: HTMLImageElement,
-  size = LOGO_SIZE,
-): ImageData {
+function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -87,16 +64,15 @@ function toImageData(image: HTMLImageElement): ImageData {
 }
 
 /** Load a brand logo: R2 snapshot first, bundled SVG as fallback. */
-async function loadBrandLogo(
-  id: BrandId,
-  remote: boolean,
-): Promise<ImageData> {
+async function loadBrandLogo(id: BrandId): Promise<ImageData> {
   const cached = imageDataCache.get(id);
   if (cached) return cached;
 
   let image: HTMLImageElement | undefined;
-  if (remote) {
-    image = await loadImage(`${BRANDS_BASE}/${id}`).catch(() => undefined);
+  try {
+    image = await loadImage(remoteBrandLogoUrl(id));
+  } catch {
+    image = undefined;
   }
   if (!image) {
     image = await loadImage(brandSvgDataUrl(id));
@@ -115,16 +91,11 @@ export async function ensureBrandImages(
   map: MapLibreMap,
   brandIds: Iterable<BrandId>,
 ): Promise<void> {
-  const ids = [...brandIds];
-  if (ids.length === 0) return;
-
-  const remote = await fetchRemoteBrandIds();
-
-  for (const id of ids) {
+  for (const id of brandIds) {
     const imageId = brandImageId(id);
     if (map.hasImage(imageId)) continue;
     try {
-      const imageData = await loadBrandLogo(id, remote.has(id));
+      const imageData = await loadBrandLogo(id);
       if (!map.hasImage(imageId)) {
         map.addImage(imageId, imageData, { pixelRatio: 2 });
       }

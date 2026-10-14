@@ -28,6 +28,9 @@ French government fuel-price open data.
   Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
   Match, Cora, BP). From zoom 13.5 the bubble opens into a capsule: mark on the
   left, the selected fuel's price in a rounded capsule right behind it.
+- 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has
+  it in shortage) stays on the map, greyed out; stations with neither a price nor
+  a brand are not drawn at all.
 - ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
 - 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
   **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
@@ -102,24 +105,26 @@ matching is alias-based (`src/lib/brands.ts`).
 #### Official logos (Brandfetch → R2)
 
 Real brand logos are snapshotted from the **Brandfetch Brand API** (the only
-Brandfetch product whose terms allow caching) and served from R2:
+Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 
 - `src/lib/brandfetch.ts` holds the reviewable **name → domain** table and the
   asset-picking rules (icon → light theme → SVG, square-ish preferred).
-- The Worker's **cron trigger** (`0 4 1,16 * *`, twice a month) calls the Brand
-  API for every brand and stores the best asset in R2 under
-  `brands-logo/<brandId>`, plus `brands-logo/manifest.json`.
-  Brandfetch's terms grant a 30-day cache licence and require a refresh at least
-  every 30 days — twice a month keeps that satisfied.
-- The client prefers `/brands/<id>` and **falls back to the bundled mark** when a
-  snapshot is missing, so the app never depends on a third party at runtime and
-  still works offline.
-- Domains flagged `// verify` in `src/lib/brandfetch.ts` still need a visual
-  check (some brands exist in several countries: Netto FR/DE, Cora, Shell/BP).
+- `GET /brands/<id>` is a **self-healing cache**:
+  1. fresh snapshot (< 29 days) → served straight from R2, no upstream call;
+  2. stale snapshot → served immediately, refreshed in the background;
+  3. no snapshot → the client draws the bundled mark while the Worker fetches the
+     logo in the background, so the next visitor gets the real one.
 
-To refresh now: Cloudflare dashboard → Worker → **Cron Triggers → Trigger**, then
-open `/brands/manifest.json` to see the per-brand status (`ok`, `no_logo`,
-`api_404`, …).
+  There is **nothing to trigger manually**.
+- The **cron** (`0 4 1,16 * *`) is only the compliance net — Brandfetch's terms
+  grant a 30-day cache licence that must be renewed by an API call at least every
+  30 days — plus a warm-up for brands nobody views.
+- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps) and
+  `/brands/report.json` (per-brand status of the last full refresh: `ok`,
+  `no_logo`, `api_404`…). Domains flagged `// verify` in `src/lib/brandfetch.ts`
+  still need a visual check (Netto FR/DE, Cora, Shell/BP).
+- The client always tries `/brands/<id>` first and falls back to the bundled SVG,
+  so it never waits for a third party and keeps working offline.
 
 > **Trademarks.** Logos are the property of their respective owners and are used
 > here for identification only; this app is not affiliated with, nor endorsed by,

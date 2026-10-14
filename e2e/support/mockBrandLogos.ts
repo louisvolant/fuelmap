@@ -38,3 +38,18 @@ export async function mockBrandLogo(
     }),
   );
 }
+
+/**
+ * Default for specs that do not care about brand logos: every snapshot 404s, so
+ * the client deterministically falls back to the bundled mark (instead of
+ * decoding the SPA's HTML fallback).
+ */
+export async function mockBrandLogoMissing(page: Page): Promise<void> {
+  await page.route(/\/brands\/[a-z0-9-]+$/, (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "unknown brand logo" }),
+    }),
+  );
+}

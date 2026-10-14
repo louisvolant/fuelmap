@@ -43,6 +43,9 @@ interface ExecutionContextLike {
  */
 const BRAND_LOGO_PREFIX = "brands-logo/";
 const BRAND_LOGO_MANIFEST = `${BRAND_LOGO_PREFIX}manifest.json`;
+const BRAND_LOGO_REPORT = `${BRAND_LOGO_PREFIX}report.json`;
+/** Brandfetch's cache licence is 30 days; refresh before it lapses. */
+const BRAND_LOGO_MAX_AGE_MS = 29 * 24 * 60 * 60 * 1000;
 
 interface BrandRefreshResult {
   id: string;
@@ -53,67 +56,66 @@ interface BrandRefreshResult {
   type?: string;
 }
 
-/** Fetch every brand from Brandfetch and snapshot the best logo into R2. */
-async function refreshBrandLogos(env: Env): Promise<BrandRefreshResult[]> {
+/** Snapshot one brand from Brandfetch into R2. Returns the outcome status. */
+async function refreshBrand(env: Env, id: string): Promise<BrandRefreshResult> {
+  const domain = BRANDFETCH_DOMAINS[id as keyof typeof BRANDFETCH_DOMAINS];
+  if (!domain) return { id, status: "unknown" };
+
   const base = env.BRANDFETCH_API_URL ?? "https://api.brandfetch.io/v2/brands";
-  const results: BrandRefreshResult[] = [];
+  const result: BrandRefreshResult = { id, domain };
 
-  for (const [id, domain] of Object.entries(BRANDFETCH_DOMAINS)) {
-    try {
-      const response = await fetch(`${base}/${encodeURIComponent(domain)}`, {
-        headers: {
-          authorization: `Bearer ${env.BRANDFETCH_API_KEY ?? ""}`,
-          accept: "application/json",
-        },
-      });
-      if (!response.ok) {
-        results.push({ id, status: `api_${response.status}`, domain });
-        continue;
-      }
-
-      const brand = (await response.json()) as BrandfetchBrand;
-      const logo = pickBrandfetchLogo(brand);
-      if (!logo) {
-        results.push({ id, status: "no_logo", name: brand.name, domain });
-        continue;
-      }
-
-      const asset = await fetch(logo.src);
-      if (!asset.ok) {
-        results.push({
-          id,
-          status: `asset_${asset.status}`,
-          name: brand.name,
-          domain,
-        });
-        continue;
-      }
-
-      await env.BRANDS_BUCKET.put(
-        `${BRAND_LOGO_PREFIX}${id}`,
-        await asset.arrayBuffer(),
-        {
-          httpMetadata: {
-            contentType: logoContentType(logo.format),
-            cacheControl: "public, max-age=31536000, immutable",
-          },
-        },
-      );
-      results.push({
-        id,
-        status: "ok",
-        name: brand.name,
-        domain,
-        format: logo.format,
-        type: logo.type,
-      });
-    } catch {
-      results.push({ id, status: "error", domain });
+  try {
+    const response = await fetch(`${base}/${encodeURIComponent(domain)}`, {
+      headers: {
+        authorization: `Bearer ${env.BRANDFETCH_API_KEY ?? ""}`,
+        accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      return { ...result, status: `api_${response.status}` };
     }
+
+    const brand = (await response.json()) as BrandfetchBrand;
+    result.name = brand.name;
+
+    const logo = pickBrandfetchLogo(brand);
+    if (!logo) return { ...result, status: "no_logo" };
+
+    const asset = await fetch(logo.src);
+    if (!asset.ok) return { ...result, status: `asset_${asset.status}` };
+
+    await env.BRANDS_BUCKET.put(
+      `${BRAND_LOGO_PREFIX}${id}`,
+      await asset.arrayBuffer(),
+      {
+        httpMetadata: {
+          contentType: logoContentType(logo.format),
+          cacheControl: "public, max-age=86400, stale-while-revalidate=2592000",
+        },
+        customMetadata: { refreshedAt: String(Date.now()), source: domain },
+      },
+    );
+
+    return {
+      ...result,
+      status: "ok",
+      format: logo.format,
+      type: logo.type,
+    };
+  } catch {
+    return { ...result, status: "error" };
+  }
+}
+
+/** Refresh every brand; used by the cron (compliance + warm-up). */
+async function refreshAllBrands(env: Env): Promise<BrandRefreshResult[]> {
+  const results: BrandRefreshResult[] = [];
+  for (const id of Object.keys(BRANDFETCH_DOMAINS)) {
+    results.push(await refreshBrand(env, id));
   }
 
   await env.BRANDS_BUCKET.put(
-    BRAND_LOGO_MANIFEST,
+    BRAND_LOGO_REPORT,
     JSON.stringify({ at: Date.now(), brands: results }),
     {
       httpMetadata: {
@@ -126,31 +128,78 @@ async function refreshBrandLogos(env: Env): Promise<BrandRefreshResult[]> {
   return results;
 }
 
-/** Serve a snapshotted brand logo (`/brands/<id>`) or the manifest. */
-async function handleBrandAsset(pathname: string, env: Env): Promise<Response> {
+/** Age (ms) of a snapshot, or `Infinity` when unknown. */
+function snapshotAge(object: R2ObjectBodyLike): number {
+  const refreshedAt = Number(object.customMetadata?.refreshedAt ?? 0);
+  return refreshedAt > 0 ? Date.now() - refreshedAt : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Serve brand logos with a **dynamic, self-healing cache**:
+ * 1. fresh snapshot in R2 → serve it (no upstream call);
+ * 2. stale snapshot → serve it now and refresh in the background;
+ * 3. no snapshot → answer 404 (the client falls back to the bundled mark) and
+ *    fetch it in the background, so the next visitor gets the real logo.
+ *
+ * The cron stays as the compliance net (an API call at least every 30 days)
+ * and as a warm-up.
+ */
+async function handleBrandAsset(
+  pathname: string,
+  env: Env,
+  ctx: ExecutionContextLike,
+): Promise<Response> {
   const name = pathname.slice("/brands/".length);
   if (!/^[a-z0-9.-]+$/.test(name)) {
     return json({ message: "invalid brand id" }, 400);
   }
 
   if (name === "manifest.json") {
-    const manifest = await env.BRANDS_BUCKET.get(BRAND_LOGO_MANIFEST);
-    if (!manifest) return json({ at: null, brands: [] });
-    return new Response(manifest.body, {
+    const list = await env.BRANDS_BUCKET.list({ prefix: BRAND_LOGO_PREFIX });
+    const brands = list.objects
+      .filter((object) => object.key !== BRAND_LOGO_MANIFEST && object.key !== BRAND_LOGO_REPORT)
+      .map((object) => ({
+        id: object.key.slice(BRAND_LOGO_PREFIX.length),
+        status: "ok",
+        refreshedAt: Number(object.customMetadata?.refreshedAt ?? 0) || null,
+      }));
+    return json({ at: Date.now(), brands });
+  }
+
+  if (name === "report.json") {
+    const report = await env.BRANDS_BUCKET.get(BRAND_LOGO_REPORT);
+    if (!report) return json({ at: null, brands: [] });
+    return new Response(report.body, {
       headers: {
         "content-type": "application/json; charset=utf-8",
-        "cache-control": "public, max-age=3600",
+        "cache-control": "public, max-age=60",
       },
     });
   }
 
+  if (!(name in BRANDFETCH_DOMAINS)) {
+    return json({ message: "unknown brand" }, 404);
+  }
+
   const object = await env.BRANDS_BUCKET.get(`${BRAND_LOGO_PREFIX}${name}`);
-  if (!object) return json({ message: "unknown brand logo" }, 404);
+  if (!object) {
+    // Nothing cached yet: refresh in the background, answer 404 so the client
+    // shows the bundled mark instead of waiting.
+    ctx.waitUntil(refreshBrand(env, name));
+    return new Response(null, {
+      status: 404,
+      headers: { "cache-control": "public, max-age=300" },
+    });
+  }
+
+  if (snapshotAge(object) > BRAND_LOGO_MAX_AGE_MS) {
+    ctx.waitUntil(refreshBrand(env, name));
+  }
 
   return new Response(object.body, {
     headers: {
       "content-type": object.httpMetadata?.contentType ?? "image/svg+xml",
-      "cache-control": "public, max-age=31536000, immutable",
+      "cache-control": "public, max-age=86400, stale-while-revalidate=2592000",
     },
   });
 }
@@ -167,6 +216,7 @@ interface RequestCf {
 interface R2ObjectBodyLike {
   body: ReadableStream;
   httpMetadata?: { contentType?: string };
+  customMetadata?: Record<string, string>;
 }
 
 interface R2BucketLike {
@@ -174,8 +224,14 @@ interface R2BucketLike {
   put(
     key: string,
     value: ArrayBuffer | string,
-    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
+    options?: {
+      httpMetadata?: { contentType?: string; cacheControl?: string };
+      customMetadata?: Record<string, string>;
+    },
   ): Promise<unknown>;
+  list(options?: {
+    prefix?: string;
+  }): Promise<{ objects: { key: string; customMetadata?: Record<string, string> }[] }>;
 }
 
 export interface Env {
@@ -485,7 +541,7 @@ export default {
     }
 
     if (url.pathname.startsWith("/brands/")) {
-      return handleBrandAsset(url.pathname, env);
+      return handleBrandAsset(url.pathname, env, ctx);
     }
 
     // Everything else is the single-page app.
@@ -498,6 +554,6 @@ export default {
     env: Env,
     ctx: ExecutionContextLike,
   ): Promise<void> {
-    ctx.waitUntil(refreshBrandLogos(env));
+    ctx.waitUntil(refreshAllBrands(env));
   },
 };

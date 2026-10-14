@@ -30,11 +30,37 @@ describe("stationsToFeatureCollection", () => {
     expect(collection.features[0].properties?.priceLabel).toBe("1.900");
   });
 
-  it("marks stations without a price", () => {
-    const noPrice: NormalizedStation = { ...station, fuels: [] };
-    const collection = stationsToFeatureCollection([noPrice], null);
+  it("hides a station with neither a price nor a brand", () => {
+    const nothing: NormalizedStation = { ...station, fuels: [], brand: undefined };
+    const collection = stationsToFeatureCollection([nothing], null);
+    expect(collection.features).toHaveLength(0);
+  });
+
+  it("dims a station that has a brand but no price", () => {
+    const dimmed: NormalizedStation = {
+      ...station,
+      fuels: [],
+      brand: "Total",
+    };
+    const collection = stationsToFeatureCollection([dimmed], null);
+    expect(collection.features).toHaveLength(1);
+    expect(collection.features[0].properties?.dimmed).toBe(true);
     expect(collection.features[0].properties?.hasPrice).toBe(false);
     expect(collection.features[0].properties?.priceLabel).toBeNull();
+  });
+
+  it("marks priced stations as not dimmed", () => {
+    const collection = stationsToFeatureCollection([station], null);
+    expect(collection.features[0].properties?.dimmed).toBe(false);
+  });
+
+  it("keeps every marker in a country without per-station prices", () => {
+    const noPrice: NormalizedStation = { ...station, fuels: [], brand: undefined };
+    const collection = stationsToFeatureCollection([noPrice], null, [], {
+      showPrices: false,
+    });
+    expect(collection.features).toHaveLength(1);
+    expect(collection.features[0].properties?.dimmed).toBe(false);
   });
 
   it("resolves the brand image from the station brand", () => {

@@ -231,6 +231,7 @@ export default function App() {
           stations={visibleStations}
           activeFuelId={activeFuelId}
           favoriteIds={favoriteIds}
+          showPrices={country.priceMode === "station"}
           onSelect={(id) => selectStation(id)}
         />
 

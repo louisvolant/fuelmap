@@ -25,34 +25,57 @@ export interface StationFeatureProperties {
   favorite: boolean;
   /** MapLibre image id of the brand mark, or `""` when unknown. */
   brandImage: string;
+  /** Station shown but with nothing to display for the current fuel. */
+  dimmed: boolean;
+}
+
+export interface StationLayersOptions {
+  /**
+   * Whether the country has per-station prices. When it does, a station with no
+   * price is "dimmed", and a station with neither a price nor a brand is skipped
+   * (an empty bubble would be meaningless). Countries without per-station prices
+   * (national maxima, OSM-only) always keep their markers.
+   */
+  showPrices?: boolean;
 }
 
 export function stationsToFeatureCollection(
   stations: NormalizedStation[],
   activeFuelId: string | null,
   favoriteIds: readonly string[] = [],
+  options: StationLayersOptions = {},
 ): FeatureCollection<Point, StationFeatureProperties> {
+  const { showPrices = true } = options;
   const favorites = new Set(favoriteIds);
-  return {
-    type: "FeatureCollection",
-    features: stations.map((station): Feature<Point, StationFeatureProperties> => {
-      const fuel = displayFuel(station, activeFuelId);
-      const price = fuel?.price;
-      const brand = matchBrand(station.brand);
-      return {
-        type: "Feature",
+  const features: Feature<Point, StationFeatureProperties>[] = [];
+
+  for (const station of stations) {
+    const fuel = displayFuel(station, activeFuelId);
+    const price = fuel?.price;
+    const brand = matchBrand(station.brand);
+    const brandImage = brand ? brandImageId(brand) : "";
+    const hasPrice = typeof price === "number";
+    const dimmed = showPrices && !hasPrice;
+
+    // A priced country with neither a price nor a brand has nothing to show.
+    if (dimmed && !brandImage) continue;
+
+    features.push({
+      type: "Feature",
+      id: station.id,
+      geometry: { type: "Point", coordinates: [station.lon, station.lat] },
+      properties: {
         id: station.id,
-        geometry: { type: "Point", coordinates: [station.lon, station.lat] },
-        properties: {
-          id: station.id,
-          priceLabel: typeof price === "number" ? formatPriceCompact(price) : null,
-          hasPrice: typeof price === "number",
-          favorite: favorites.has(station.id),
-          brandImage: brand ? brandImageId(brand) : "",
-        },
-      };
-    }),
-  };
+        priceLabel: hasPrice ? formatPriceCompact(price as number) : null,
+        hasPrice,
+        favorite: favorites.has(station.id),
+        brandImage,
+        dimmed,
+      },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
 }
 
 /** Layer/source identifiers, exported for tests and interactions. */

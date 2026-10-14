@@ -31,6 +31,8 @@ interface StationMarkersProps {
   activeFuelId?: string | null;
   /** Ids of favorite stations, highlighted on the map. */
   favoriteIds?: readonly string[];
+  /** Whether the country publishes per-station prices (see stationLayers). */
+  showPrices?: boolean;
   onSelect?: (id: string) => void;
 }
 
@@ -50,6 +52,7 @@ export function StationMarkers({
   stations,
   activeFuelId = null,
   favoriteIds = [],
+  showPrices = true,
   onSelect,
 }: StationMarkersProps) {
   const map = useMap();
@@ -64,8 +67,11 @@ export function StationMarkers({
   }, [onSelect]);
 
   const data = useMemo(
-    () => stationsToFeatureCollection(stations, activeFuelId, favoriteIds),
-    [stations, activeFuelId, favoriteIds],
+    () =>
+      stationsToFeatureCollection(stations, activeFuelId, favoriteIds, {
+        showPrices,
+      }),
+    [stations, activeFuelId, favoriteIds, showPrices],
   );
 
   // Track the brands currently displayed, and register their SVG marks.
@@ -144,10 +150,20 @@ export function StationMarkers({
             source: SOURCE_ID,
             filter: ["!", ["has", "point_count"]],
             paint: {
-              "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
+              "circle-color": [
+                "case",
+                ["get", "favorite"],
+                "#f59e0b",
+                ["case", ["get", "dimmed"], "#e5e7eb", "#ffffff"],
+              ],
               "circle-radius": 15,
               "circle-stroke-width": 2,
-              "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
+              "circle-stroke-color": [
+                "case",
+                ["get", "favorite"],
+                "#b45309",
+                ["case", ["get", "dimmed"], "#cbd5e1", "#0f172a"],
+              ],
             },
           });
         }
@@ -199,6 +215,10 @@ export function StationMarkers({
               "icon-size": 0.86,
               "icon-allow-overlap": true,
               "icon-anchor": "center",
+            },
+            paint: {
+              // Dimmed stations (no price for the current fuel) are greyed out.
+              "icon-opacity": ["case", ["get", "dimmed"], 0.4, 1],
             },
           });
         }
