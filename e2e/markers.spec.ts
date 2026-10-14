@@ -74,7 +74,7 @@ test("renders individual markers when zoomed in", async ({ page }) => {
 
   await waitForLayer(page, "station-points");
 
-  const { pointCount, clusterCount } = await page.evaluate(() => {
+  const { pointCount, clusterCount, labelCount } = await page.evaluate(() => {
     const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
     const pointIds = new Set(
       map
@@ -85,10 +85,15 @@ test("renders individual markers when zoomed in", async ({ page }) => {
       pointCount: pointIds.size,
       clusterCount: map.queryRenderedFeatures({ layers: ["station-clusters"] })
         .length,
+      labelCount: map.queryRenderedFeatures({
+        layers: ["station-price-labels"],
+      }).length,
     };
   });
 
   // At this zoom stations are no longer clustered.
   expect(pointCount).toBeGreaterThanOrEqual(1);
   expect(clusterCount).toBe(0);
+  // Price labels are rendered inside the bubbles.
+  expect(labelCount).toBeGreaterThanOrEqual(1);
 });

@@ -128,7 +128,7 @@ export function StationMarkers({
             filter: ["!", ["has", "point_count"]],
             paint: {
               "circle-color": ["case", ["get", "favorite"], "#f59e0b", "#ffffff"],
-              "circle-radius": 16,
+              "circle-radius": 18,
               "circle-stroke-width": 2,
               "circle-stroke-color": ["case", ["get", "favorite"], "#b45309", "#0f172a"],
             },
@@ -148,10 +148,10 @@ export function StationMarkers({
             ],
             layout: {
               "icon-image": ["get", "brandImage"],
-              "icon-size": 0.62,
+              "icon-size": 0.5,
               "icon-allow-overlap": true,
               "icon-anchor": "center",
-              "icon-offset": [0, -6],
+              "icon-offset": [0, -8],
             },
           });
         }
@@ -169,9 +169,15 @@ export function StationMarkers({
             ],
             layout: {
               "text-field": ["get", "priceLabel"],
-              "text-size": 9,
-              "text-offset": [0, 1.15],
-              "text-anchor": "top",
+              "text-size": 10,
+              "text-anchor": "center",
+              // Sit under the brand mark when there is one, otherwise centered.
+              "text-offset": [
+                "case",
+                ["!=", ["get", "brandImage"], ""],
+                ["literal", [0, 0.85]],
+                ["literal", [0, 0]],
+              ],
               "text-allow-overlap": true,
             },
             paint: { "text-color": "#0f172a" },
