@@ -36,6 +36,31 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/** Cloudflare geography attached to an incoming request. */
+interface RequestCf {
+  country?: string;
+  city?: string;
+  latitude?: string;
+  longitude?: string;
+}
+
+/**
+ * Coarse location derived from the client IP address, using Cloudflare's
+ * `request.cf`. Used as a fallback when geolocation is not authorized.
+ */
+function handleGeo(request: Request): Response {
+  const cf = (request as Request & { cf?: RequestCf }).cf;
+  const lat = cf?.latitude !== undefined ? Number(cf.latitude) : Number.NaN;
+  const lon = cf?.longitude !== undefined ? Number(cf.longitude) : Number.NaN;
+
+  return json({
+    country: cf?.country ?? null,
+    city: cf?.city ?? null,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
+  });
+}
+
 async function handleGermanStations(url: URL, env: Env): Promise<Response> {
   const lat = url.searchParams.get("lat");
   const lng = url.searchParams.get("lng");
@@ -74,6 +99,10 @@ export default {
 
     if (url.pathname === "/api/de/stations") {
       return handleGermanStations(url, env);
+    }
+
+    if (url.pathname === "/api/geo") {
+      return handleGeo(request);
     }
 
     // Everything else is the single-page app.
