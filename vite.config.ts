@@ -39,7 +39,29 @@ export default defineConfig({
         navigateFallback: "/index.html",
         runtimeCaching: [
           {
-            // OpenFreeMap vector tiles, styles and fonts: cache first.
+            // Styles change over time: always revalidate so a cached style never
+            // references sprites or fonts that no longer exist.
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\/styles\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "openfreemap-styles",
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Sprites: revalidate in the background.
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\/sprites\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "openfreemap-sprites",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Fonts and vector tiles are immutable: cache first.
             urlPattern: /^https:\/\/tiles\.openfreemap\.org\/.*/i,
             handler: "CacheFirst",
             options: {

@@ -128,6 +128,7 @@ export function StationMarkers({
             filter: ["has", "point_count"],
             layout: {
               "text-field": ["get", "point_count_abbreviated"],
+              "text-font": ["Noto Sans Regular"],
               "text-size": 12,
               "text-allow-overlap": true,
             },
@@ -166,9 +167,11 @@ export function StationMarkers({
             layout: {
               "icon-image": PRICE_PILL_IMAGE_ID,
               "icon-text-fit": "both",
-              "icon-text-fit-padding": [3, 7, 3, 7],
+              "icon-text-fit-padding": [2, 6, 2, 6],
               "icon-allow-overlap": true,
               "text-field": ["get", "priceLabel"],
+              // OpenFreeMap hosts Noto Sans; the Mapbox default font stack 404s.
+              "text-font": ["Noto Sans Regular"],
               "text-size": 11,
               "text-anchor": "left",
               "text-offset": [1.5, 0],
@@ -192,7 +195,8 @@ export function StationMarkers({
             ],
             layout: {
               "icon-image": ["get", "brandImage"],
-              "icon-size": 0.5,
+              // Fill the bubble: keep only a hairline of white around the mark.
+              "icon-size": 0.86,
               "icon-allow-overlap": true,
               "icon-anchor": "center",
             },

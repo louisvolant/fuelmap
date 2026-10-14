@@ -26,12 +26,19 @@ export function enrichStationsWithBrands(
 
   const result = stations.map((station) => ({ ...station }));
 
+  // Cheap bounding-box prefilter: avoids a trigonometric distance computation
+  // for the vast majority of (station, node) pairs.
+  const latWindow = maxDistanceMeters / 110_000;
+  const lonWindow = maxDistanceMeters / 60_000;
+
   // Candidate pairs (station without brand ↔ OSM station within reach).
   const pairs: { station: NormalizedStation; index: number; distance: number }[] =
     [];
   for (const station of result) {
     if (station.brand) continue;
     candidates.forEach((node, index) => {
+      if (Math.abs(node.lat - station.lat) > latWindow) return;
+      if (Math.abs(node.lon - station.lon) > lonWindow) return;
       const distance = distanceMeters(
         [station.lon, station.lat],
         [node.lon, node.lat],
