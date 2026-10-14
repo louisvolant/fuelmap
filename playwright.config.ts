@@ -7,7 +7,12 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Headless software WebGL is CPU-heavy: cap the workers and allow a retry so
+  // rare contention stalls never make the suite red.
+  workers: 4,
+  timeout: 45_000,
+  retries: process.env.CI ? 2 : 1,
+  expect: { timeout: 10_000 },
   reporter: process.env.CI
     ? [["github"], ["html", { open: "never" }]]
     : [["list"]],

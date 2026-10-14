@@ -37,7 +37,7 @@ export async function waitForLayer(page: Page, layer: string): Promise<void> {
       }
     },
     layer,
-    { timeout: 30_000 },
+    { timeout: 20_000 },
   );
 }
 
@@ -62,19 +62,38 @@ export async function waitForStations(page: Page): Promise<void> {
       }
     },
     undefined,
-    { timeout: 30_000 },
+    { timeout: 20_000 },
   );
 }
 
 /** Move the camera over Paris at a zoom where markers are unclustered. */
 export async function focusParis(page: Page, zoom = 15): Promise<void> {
   await page.evaluate((value) => {
-    (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap.jumpTo({
-      center: [2.3522, 48.8566],
-      zoom: value,
-    });
+    const map = (
+      window as unknown as {
+        __fuelmapMap: {
+          jumpTo: (options: unknown) => void;
+          triggerRepaint?: () => void;
+        };
+      }
+    ).__fuelmapMap;
+    map.jumpTo({ center: [2.3522, 48.8566], zoom: value });
+    // Force a frame: headless renderers may otherwise throttle repaints.
+    map.triggerRepaint?.();
   }, zoom);
   await waitForLayer(page, "station-points");
+}
+
+/** Number of features currently held by the `stations` map source. */
+export async function stationCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    try {
+      return map.getSource("stations").serialize().data.features.length;
+    } catch {
+      return -1;
+    }
+  });
 }
 
 /** Sorted station ids currently fed into the map source. */

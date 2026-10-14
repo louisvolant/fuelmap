@@ -6,7 +6,7 @@ import { mockGermanyApi } from "./support/mockGermanyApi";
 import { mockItalyApi } from "./support/mockItalyApi";
 import { mockMaxPrices } from "./support/mockMaxPrices";
 import { mockOverpass } from "./support/mockOverpass";
-import { waitForStations } from "./support/map";
+import { waitForStations, stationCount } from "./support/map";
 
 // Two OSM fuel stations, returned for any bounding box.
 const OSM_STATIONS = [
@@ -35,12 +35,12 @@ test.beforeEach(async ({ page }) => {
 
 test("switches to Spain and loads Spanish stations", async ({ page }) => {
   // France first.
-  await expect(page.getByText(/Stations:\s*4/)).toBeVisible();
+  await expect.poll(() => stationCount(page)).toBe(4);
 
   await page.getByRole("button", { name: "Réglages" }).click();
   await page.getByRole("combobox", { name: "Pays" }).selectOption("ES");
 
-  await expect(page.getByText(/Stations:\s*2/)).toBeVisible();
+  await expect.poll(() => stationCount(page)).toBe(2);
 });
 
 test("switches to Germany and loads stations for the viewport", async ({
@@ -50,14 +50,14 @@ test("switches to Germany and loads stations for the viewport", async ({
   await page.getByRole("combobox", { name: "Pays" }).selectOption("DE");
 
   // Germany is area-based: stations are fetched for the current viewport.
-  await expect(page.getByText(/Stations:\s*3/)).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => stationCount(page)).toBe(3);
 });
 
 test("switches to Italy and loads Italian stations", async ({ page }) => {
   await page.getByRole("button", { name: "Réglages" }).click();
   await page.getByRole("combobox", { name: "Pays" }).selectOption("IT");
 
-  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => stationCount(page)).toBe(2);
   // Italian fuel catalog is shown.
   await expect(
     page.getByRole("button", { name: "Essence", exact: true }),
@@ -68,20 +68,22 @@ test("switches to Belgium, loads OSM stations and shows the maximum prices", asy
   page,
 }) => {
   await page.getByRole("button", { name: "Réglages" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("combobox", { name: "Pays" }).selectOption("BE");
 
   await expect(page.getByText(/Prix maximum officiel/)).toBeVisible();
   await expect(page.getByText(/2,121/)).toBeVisible();
-  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => stationCount(page)).toBe(2);
 });
 
 test("switches to Switzerland with OpenStreetMap stations and no prices", async ({
   page,
 }) => {
   await page.getByRole("button", { name: "Réglages" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("combobox", { name: "Pays" }).selectOption("CH");
 
-  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => stationCount(page)).toBe(2);
   await expect(page.getByText(/Prix maximum officiel/)).toHaveCount(0);
 });
 
