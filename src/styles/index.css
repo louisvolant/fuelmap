@@ -29,3 +29,10 @@ body {
 .maplibregl-ctrl-attrib {
   font-size: 10px;
 }
+
+/* Reserve the very bottom of the bottom-right corner for the app's own map
+   controls (locate button), so they never overlap MapLibre's zoom control and
+   attribution stack. Specificity beats maplibre-gl.css regardless of order. */
+.maplibregl-map .maplibregl-ctrl-bottom-right {
+  bottom: 3.25rem;
+}

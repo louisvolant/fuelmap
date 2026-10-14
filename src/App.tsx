@@ -257,7 +257,7 @@ export default function App() {
           <MaxPriceBanner />
         </div>
 
-        <div className="pointer-events-none absolute right-3 bottom-24 z-20 flex flex-col items-center gap-2">
+        <div className="pointer-events-none absolute right-3 bottom-3 z-20 flex flex-col items-center gap-2">
           <LocateButton />
         </div>
 
