@@ -42,25 +42,24 @@ export async function waitForLayer(page: Page, layer: string): Promise<void> {
 }
 
 /**
- * Wait until stations are loaded and rendered, whether they are clustered
- * (country zoom) or individual (zoomed in around the user).
+ * Wait until stations are loaded into the map source.
+ *
+ * This is deliberately viewport- and render-independent: it only checks the
+ * GeoJSON source contents, so it is fast and never flaky. Specs that assert
+ * *rendering* (markers, labels) use `waitForLayer` / `focusParis` explicitly.
  */
 export async function waitForStations(page: Page): Promise<void> {
   await waitForMap(page);
   await page.waitForFunction(
     () => {
       const map = (window as unknown as { __fuelmapMap?: TestMap }).__fuelmapMap;
-      if (!map) return false;
-      return ["station-clusters", "station-points"].some((layer) => {
-        try {
-          return (
-            Boolean(map.getLayer(layer)) &&
-            map.queryRenderedFeatures({ layers: [layer] }).length > 0
-          );
-        } catch {
-          return false;
-        }
-      });
+      const source = map?.getSource("stations");
+      if (!source) return false;
+      try {
+        return source.serialize().data.features.length > 0;
+      } catch {
+        return false;
+      }
     },
     undefined,
     { timeout: 30_000 },
