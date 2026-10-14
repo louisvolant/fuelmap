@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockGeoApi } from "./support/mockGeoApi";
 import { mockOverpass } from "./support/mockOverpass";
