@@ -3,7 +3,7 @@ import type {
   CountryCode,
   NormalizedStation,
 } from "@/countries/types";
-import { fetchOsmFuelStations } from "@/lib/osmStations";
+import { fetchOsmStations } from "@/lib/osmStations";
 
 interface OsmAreaSourceOptions {
   id: string;
@@ -13,7 +13,7 @@ interface OsmAreaSourceOptions {
 }
 
 /**
- * Area-based station source backed by OpenStreetMap (Overpass).
+ * Area-based station source backed by OpenStreetMap (through the Worker proxy).
  * Returns stations without prices: used for countries that have no per-station
  * price data (Belgium, Luxembourg, Switzerland).
  */
@@ -30,7 +30,7 @@ export function createOsmAreaSource({
     refreshIntervalMs,
     attribution,
     async fetchArea(bounds, { signal } = {}) {
-      const stations = await fetchOsmFuelStations(bounds, { signal });
+      const stations = await fetchOsmStations(bounds, { signal });
       return stations.map(
         (station): NormalizedStation => ({
           id: `${country}:${station.key}`,

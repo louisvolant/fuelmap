@@ -1,12 +1,12 @@
 import { expect } from "@playwright/test";
 import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
-import { mockOverpass } from "./support/mockOverpass";
+import { mockOsmStations } from "./support/mockOsmStations";
 import { clickStation, focusParis, waitForStations } from "./support/map";
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
-  await mockOverpass(page);
+  await mockOsmStations(page);
   await page.goto("/");
   await waitForStations(page);
 });

@@ -29,7 +29,7 @@ import {
 } from "@/hooks/useFilteredStations";
 import { useCountryStations } from "@/hooks/useCountryStations";
 import { useInitialView } from "@/hooks/useInitialView";
-import { useOsmBrands } from "@/hooks/useOsmBrands";
+import { useOsmStations } from "@/hooks/useOsmStations";
 import { usePanelPresentation } from "@/hooks/usePanelPresentation";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
@@ -67,7 +67,7 @@ export default function App() {
     bounds,
   );
 
-  const osmBrands = useOsmBrands(
+  const osmStations = useOsmStations(
     countryCode,
     view && view.zoom >= PRICE_LABEL_MIN_ZOOM ? view.bounds : null,
   );
@@ -75,9 +75,9 @@ export default function App() {
   const enrichedStations = useMemo(
     () =>
       countryCode === "FR"
-        ? enrichStationsWithBrands(stations, osmBrands.data ?? [])
+        ? enrichStationsWithBrands(stations, osmStations.data ?? [])
         : stations,
-    [countryCode, stations, osmBrands.data],
+    [countryCode, stations, osmStations.data],
   );
 
   const userPosition = useGeolocationStore((state) => state.position);

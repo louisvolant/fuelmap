@@ -5,21 +5,13 @@ import { mockSpainApi } from "./support/mockSpainApi";
 import { mockGermanyApi } from "./support/mockGermanyApi";
 import { mockItalyApi } from "./support/mockItalyApi";
 import { mockMaxPrices } from "./support/mockMaxPrices";
-import { mockOverpass } from "./support/mockOverpass";
+import { mockOsmStations } from "./support/mockOsmStations";
 import { waitForStations, stationCount } from "./support/map";
 
 // Two OSM fuel stations, returned for any bounding box.
 const OSM_STATIONS = [
-  {
-    lat: 50.8503,
-    lon: 4.3517,
-    tags: { name: "Total Brussels", brand: "Total", "addr:city": "Bruxelles" },
-  },
-  {
-    lat: 50.846,
-    lon: 4.36,
-    tags: { name: "Q8 Leuven", brand: "Q8", "addr:city": "Leuven" },
-  },
+  { lat: 50.8503, lon: 4.3517, brand: "Total", city: "Bruxelles" },
+  { lat: 50.846, lon: 4.36, brand: "Q8", city: "Leuven" },
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -28,7 +20,7 @@ test.beforeEach(async ({ page }) => {
   await mockGermanyApi(page);
   await mockItalyApi(page);
   await mockMaxPrices(page);
-  await mockOverpass(page, OSM_STATIONS);
+  await mockOsmStations(page, OSM_STATIONS);
   await page.goto("/");
   await waitForStations(page);
 });

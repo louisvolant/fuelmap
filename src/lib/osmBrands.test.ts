@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedStation } from "@/countries/types";
-import {
-  enrichStationsWithBrands,
-  type OsmFuelNode,
-} from "@/lib/osmBrands";
+import { enrichStationsWithBrands } from "@/lib/osmBrands";
+import type { OsmFuelStation } from "@/lib/osmStations";
 
-function station(id: string, lon: number, lat: number, brand?: string): NormalizedStation {
+function station(
+  id: string,
+  lon: number,
+  lat: number,
+  brand?: string,
+): NormalizedStation {
   return {
     id,
     country: "FR",
@@ -20,30 +23,55 @@ function station(id: string, lon: number, lat: number, brand?: string): Normaliz
   };
 }
 
+function node(
+  key: string,
+  lon: number,
+  lat: number,
+  brand?: string,
+): OsmFuelStation {
+  return { key, lon, lat, brand, opening24h: false };
+}
+
 describe("enrichStationsWithBrands", () => {
-  it("fills the brand from the nearest OSM node", () => {
+  it("fills the brand from the nearest OSM station", () => {
     const stations = [station("a", 2.3522, 48.8566)];
-    const nodes: OsmFuelNode[] = [
-      { lon: 2.35221, lat: 48.85661, brand: "Total" },
-      { lon: 2.4, lat: 48.9, brand: "Shell" },
+    const nodes = [
+      node("node/1", 2.35221, 48.85661, "Total"),
+      node("node/2", 2.4, 48.9, "Shell"),
     ];
     expect(enrichStationsWithBrands(stations, nodes)[0].brand).toBe("Total");
   });
 
   it("keeps an existing brand", () => {
     const stations = [station("a", 2.3522, 48.8566, "Carrefour")];
-    const nodes: OsmFuelNode[] = [{ lon: 2.3522, lat: 48.8566, brand: "Total" }];
+    const nodes = [node("node/1", 2.3522, 48.8566, "Total")];
     expect(enrichStationsWithBrands(stations, nodes)[0].brand).toBe("Carrefour");
   });
 
-  it("ignores nodes farther than the radius", () => {
+  it("ignores OSM stations beyond the radius", () => {
     const stations = [station("a", 2.3522, 48.8566)];
-    const nodes: OsmFuelNode[] = [{ lon: 2.4, lat: 48.9, brand: "Shell" }];
-    expect(enrichStationsWithBrands(stations, nodes, 60)[0].brand).toBeUndefined();
+    const nodes = [node("node/1", 2.4, 48.9, "Shell")];
+    expect(enrichStationsWithBrands(stations, nodes)[0].brand).toBeUndefined();
   });
 
-  it("is a no-op without nodes", () => {
+  it("assigns each OSM station to at most one official station", () => {
+    // Two official stations ~80 m apart, a single OSM node between them.
+    const stations = [
+      station("near", 2.3522, 48.8566),
+      station("far", 2.3522, 48.8573),
+    ];
+    const nodes = [node("node/1", 2.3522, 48.8566, "Avia")];
+
+    const enriched = enrichStationsWithBrands(stations, nodes);
+    expect(enriched.find((s) => s.id === "near")?.brand).toBe("Avia");
+    expect(enriched.find((s) => s.id === "far")?.brand).toBeUndefined();
+  });
+
+  it("is a no-op when there is nothing to match", () => {
     const stations = [station("a", 2.3522, 48.8566)];
     expect(enrichStationsWithBrands(stations, [])).toBe(stations);
+    expect(
+      enrichStationsWithBrands(stations, [node("node/1", 2.3522, 48.8566)]),
+    ).toBe(stations);
   });
 });

@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
-import { mockOverpass } from "./support/mockOverpass";
+import { mockOsmStations } from "./support/mockOsmStations";
 import { mockSpainApi } from "./support/mockSpainApi";
 import { focusParis, waitForStations } from "./support/map";
 
@@ -20,14 +20,12 @@ type TestMap = {
 };
 
 // One OSM node sits exactly on the first French fixture station.
-const OSM_NODES = [
-  { lat: 48.8566, lon: 2.3522, tags: { brand: "Total" } },
-];
+const OSM_NODES = [{ lat: 48.8566, lon: 2.3522, brand: "Total" }];
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockSpainApi(page);
-  await mockOverpass(page, OSM_NODES);
+  await mockOsmStations(page, OSM_NODES);
   await page.goto("/");
   await waitForStations(page);
 });

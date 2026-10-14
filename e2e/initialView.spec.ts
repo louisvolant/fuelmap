@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockGeoApi } from "./support/mockGeoApi";
-import { mockOverpass } from "./support/mockOverpass";
+import { mockOsmStations } from "./support/mockOsmStations";
 import { mockSpainApi } from "./support/mockSpainApi";
 import { waitForMap } from "./support/map";
 
@@ -29,7 +29,7 @@ test.describe("geolocation already authorized", () => {
 
   test("opens the map around the user position", async ({ page }) => {
     await mockFuelApi(page);
-    await mockOverpass(page);
+    await mockOsmStations(page);
     await mockGeoApi(page);
     await page.goto("/");
     await waitForMap(page);
@@ -44,7 +44,7 @@ test.describe("geolocation unavailable", () => {
   test("falls back to the IP location and country", async ({ page }) => {
     await mockFuelApi(page);
     await mockSpainApi(page);
-    await mockOverpass(page);
+    await mockOsmStations(page);
     await mockGeoApi(page, {
       country: "ES",
       city: "Madrid",
@@ -68,7 +68,7 @@ test.describe("geolocation unavailable", () => {
     page,
   }) => {
     await mockFuelApi(page);
-    await mockOverpass(page);
+    await mockOsmStations(page);
     await mockGeoApi(page);
     await page.goto("/");
     await waitForMap(page);

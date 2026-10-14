@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
-import { mockOverpass } from "./support/mockOverpass";
+import { mockOsmStations } from "./support/mockOsmStations";
 import { mockSpainApi } from "./support/mockSpainApi";
 import { focusParis, stationCount, waitForStations } from "./support/map";
 
@@ -18,7 +18,7 @@ test.describe("basemap style switcher", () => {
   test.beforeEach(async ({ page }) => {
     await mockFuelApi(page);
     await mockSpainApi(page);
-    await mockOverpass(page);
+    await mockOsmStations(page);
     await page.goto("/");
     await waitForStations(page);
   });

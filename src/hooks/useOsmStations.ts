@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { BoundingBox, CountryCode } from "@/countries/types";
 import { getMeta, setMeta } from "@/lib/db/indexedDb";
-import { fetchOsmFuelBrands, type OsmFuelNode } from "@/lib/osmBrands";
+import { fetchOsmStations, type OsmFuelStation } from "@/lib/osmStations";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-interface CachedOsmBrands {
+interface CachedOsmStations {
   at: number;
-  nodes: OsmFuelNode[];
+  stations: OsmFuelStation[];
 }
 
 /** Coarse bounding-box key so small pans reuse the same cached result. */
@@ -16,27 +16,30 @@ function bboxKey(bounds: BoundingBox): string {
 }
 
 /**
- * OpenStreetMap brand data for the current viewport, cached for a week.
+ * OpenStreetMap fuel stations for the current viewport, cached for a week.
  * Only enabled for France (the one country whose official data has no brand)
  * and at zooms where brand marks are actually displayed.
  */
-export function useOsmBrands(country: CountryCode, bounds: BoundingBox | null) {
+export function useOsmStations(
+  country: CountryCode,
+  bounds: BoundingBox | null,
+) {
   const key = bounds ? bboxKey(bounds) : null;
 
-  return useQuery<OsmFuelNode[]>({
-    queryKey: ["osm-brands", key],
+  return useQuery<OsmFuelStation[]>({
+    queryKey: ["osm-stations", key],
     enabled: country === "FR" && bounds !== null,
     staleTime: CACHE_TTL_MS,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!bounds) return [];
-      const metaKey = `osmBrands:${key}`;
-      const cached = await getMeta<CachedOsmBrands>(metaKey);
-      if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.nodes;
+      const metaKey = `osmStations:${key}`;
+      const cached = await getMeta<CachedOsmStations>(metaKey);
+      if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.stations;
 
-      const nodes = await fetchOsmFuelBrands(bounds);
-      await setMeta(metaKey, { at: Date.now(), nodes });
-      return nodes;
+      const stations = await fetchOsmStations(bounds);
+      await setMeta(metaKey, { at: Date.now(), stations });
+      return stations;
     },
   });
 }

@@ -79,11 +79,13 @@ French government fuel-price open data.
 - **Attribution:** *Prix des carburants — DGCCRF / data.economie.gouv.fr*
 - ⚠️ The API exposes neither brand nor station name, and its `latitude`/`longitude`
   fields are integers ×100 000 — FuelMap only trusts the `geom` field.
-- **Brands are derived from OpenStreetMap**: fuel nodes (`amenity=fuel`) with a
-  `brand`/`operator`/`name` tag are fetched with Overpass for the current viewport
-  (from zoom 11) and matched to the nearest official station within 60 m. Results
-  are cached for a week. This is only used for France; Spain (`Rótulo`) and
-  Germany (`brand`) expose brands natively.
+- **Brands are derived from OpenStreetMap**: fuel stations (`amenity=fuel`) are
+  fetched for the current viewport (from zoom 11) **through the Worker** — the
+  public Overpass API rate-limits direct browser use — and matched to the nearest
+  official station within 120 m, with a **unique assignment** (each OSM station
+  brands at most one official station). Results are cached for a week, both at
+  the edge and in IndexedDB. Only used for France; Spain (`Rótulo`) and Germany
+  (`brand`) expose brands natively.
 
 ### Brand marks
 
@@ -234,7 +236,10 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
    `GET /api/it/stations` — which fetches and joins the two MIMIT CSV files
    (no CORS upstream) and caches them at the edge,
    `GET /api/max-prices?country=BE|LU` — the official national maximum prices
-   (Statbel CSV for Belgium, official price table for Luxembourg), and
+   (Statbel CSV for Belgium, official price table for Luxembourg),
+   `GET /api/osm/stations` — OpenStreetMap fuel stations via Overpass, tried
+   across mirrors and cached at the edge for a week (used for the French brand
+   enrichment and for Belgian / Luxembourg / Swiss station positions), and
    `GET /api/geo` — a coarse location derived from the client IP
    (Cloudflare `request.cf`), used when geolocation is not authorized.
 

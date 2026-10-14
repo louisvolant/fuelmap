@@ -6,35 +6,30 @@ describe("createOsmAreaSource", () => {
     vi.unstubAllGlobals();
   });
 
-  it("maps Overpass elements to stations without prices", async () => {
+  it("maps worker OSM stations to stations without prices", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
         async () =>
           new Response(
             JSON.stringify({
-              elements: [
+              stations: [
                 {
-                  type: "node",
-                  id: 42,
+                  key: "node/42",
                   lat: 50.8503,
                   lon: 4.3517,
-                  tags: {
-                    name: "Total Brussels",
-                    brand: "Total",
-                    "addr:city": "Bruxelles",
-                    "addr:street": "Rue de la Loi",
-                    "addr:housenumber": "5",
-                    "addr:postcode": "1000",
-                    opening_hours: "24/7",
-                  },
+                  brand: "Total",
+                  city: "Bruxelles",
+                  address: "5 Rue de la Loi",
+                  postalCode: "1000",
+                  opening24h: true,
                 },
-                // Ways carry their position in `center`.
                 {
-                  type: "way",
-                  id: 7,
-                  center: { lat: 49.61, lon: 6.13 },
-                  tags: { operator: "ArcelorMittal" },
+                  key: "way/7",
+                  lat: 49.61,
+                  lon: 6.13,
+                  brand: "ArcelorMittal",
+                  opening24h: false,
                 },
               ],
             }),
@@ -57,11 +52,6 @@ describe("createOsmAreaSource", () => {
       automat24h: true,
       fuels: [],
     });
-    expect(stations[1]).toMatchObject({
-      id: "BE:way/7",
-      brand: "ArcelorMittal",
-      lat: 49.61,
-      lon: 6.13,
-    });
+    expect(stations[1]).toMatchObject({ id: "BE:way/7", lat: 49.61, lon: 6.13 });
   });
 });

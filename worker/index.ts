@@ -57,11 +57,118 @@ const ITALY_PREZZI_URL =
 const ITALY_CACHE_KEY = "https://fuelmap.internal/api/it/stations";
 const ONE_HOUR = 60 * 60;
 
-/** Belgium: Statbel official (maximum) petroleum product rates as CSV. */
-const BELGIUM_MAX_PRICES_URL =
+/** Belgium: Statbel official (maximum) petroleum product rates as CSV. */const BELGIUM_MAX_PRICES_URL =
   "https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/CSV";
 /** Luxembourg: official price table (first incl. VAT row is the current rate). */
 const LUXEMBOURG_MAX_PRICES_URL = "https://www.petrol.lu/prix-officiels/";
+
+/** Overpass mirrors, tried in order. */
+const OSM_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+const OSM_CACHE_TTL = 7 * 24 * 60 * 60;
+
+interface OverpassElement {
+  type: string;
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+}
+
+/** Run an Overpass query against the mirrors until one answers. */
+async function queryOverpass(query: string): Promise<OverpassElement[]> {
+  for (const mirror of OSM_MIRRORS) {
+    try {
+      const response = await fetch(mirror, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          accept: "application/json",
+          // Overpass requires a descriptive User-Agent.
+          "user-agent":
+            "FuelMap/1.0 (+https://github.com/louisvolant/fuelmap)",
+        },
+        body: new URLSearchParams({ data: query }).toString(),
+      });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as { elements?: OverpassElement[] };
+      if (Array.isArray(payload.elements)) return payload.elements;
+    } catch {
+      // Try the next mirror.
+    }
+  }
+  return [];
+}
+
+/**
+ * OpenStreetMap fuel stations for a bounding box, via Overpass.
+ * Used for France (brand enrichment) and for Belgium / Luxembourg / Switzerland
+ * (station positions). Cached at the edge for a week so a given area is fetched
+ * from Overpass at most once per week across all users.
+ */
+async function handleOsmStations(
+  url: URL,
+  ctx: ExecutionContextLike,
+): Promise<Response> {
+  const west = Number(url.searchParams.get("west"));
+  const south = Number(url.searchParams.get("south"));
+  const east = Number(url.searchParams.get("east"));
+  const north = Number(url.searchParams.get("north"));
+  if (![west, south, east, north].every(Number.isFinite)) {
+    return json({ message: "invalid bounding box" }, 400);
+  }
+
+  const cacheKey = new Request(
+    `https://fuelmap.internal/api/osm/stations?w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
+    { method: "GET" },
+  );
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return cached;
+
+  const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
+  const elements = await queryOverpass(query);
+
+  const stations = elements.flatMap((element) => {
+    const lat = element.lat ?? element.center?.lat;
+    const lon = element.lon ?? element.center?.lon;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+
+    const tags = element.tags ?? {};
+    const address = [tags["addr:housenumber"], tags["addr:street"]]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    return [
+      {
+        key: `${element.type}/${element.id}`,
+        lat: lat as number,
+        lon: lon as number,
+        brand: tags.brand ?? tags.operator ?? tags.name ?? null,
+        city:
+          tags["addr:city"] ?? tags["addr:town"] ?? tags["addr:village"] ?? null,
+        address: address || null,
+        postalCode: tags["addr:postcode"] ?? null,
+        opening24h: tags.opening_hours === "24/7",
+      },
+    ];
+  });
+
+  const response = json({ stations });
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", `public, max-age=${OSM_CACHE_TTL}`);
+  ctx.waitUntil(
+    caches.default.put(
+      cacheKey,
+      new Response(response.clone().body, { status: 200, headers }),
+    ),
+  );
+  return response;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -219,6 +326,10 @@ export default {
 
     if (url.pathname === "/api/max-prices") {
       return handleMaxPrices(url, ctx);
+    }
+
+    if (url.pathname === "/api/osm/stations") {
+      return handleOsmStations(url, ctx);
     }
 
     if (url.pathname === "/api/geo") {

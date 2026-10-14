@@ -1,13 +1,13 @@
 import { test as base } from "@playwright/test";
 import { mockBasemap } from "./mockBasemap";
-import { mockOverpass } from "./mockOverpass";
+import { mockOsmStations } from "./mockOsmStations";
 
 /**
  * Playwright test with the heavy/network-dependent external services stubbed:
  * - the OpenFreeMap basemap is replaced by a one-layer style,
  * - OpenStreetMap (Overpass) returns an empty result set by default.
  *
- * Specs that need OSM data call `mockOverpass(page, nodes)` themselves; because
+ * Specs that need OSM data call `mockOsmStations(page, nodes)` themselves; because
  * Playwright uses the most recently registered matching route, their handler
  * takes precedence over this default.
  *
@@ -16,7 +16,7 @@ import { mockOverpass } from "./mockOverpass";
 export const test = base.extend({
   page: async ({ page }, run) => {
     await mockBasemap(page);
-    await mockOverpass(page);
+    await mockOsmStations(page);
     await run(page);
   },
 });

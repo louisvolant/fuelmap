@@ -5,6 +5,7 @@ export interface OsmFuelStation {
   key: string;
   lat: number;
   lon: number;
+  /** `brand`, `operator` or `name` from OpenStreetMap, when present. */
   brand?: string;
   city?: string;
   address?: string;
@@ -12,65 +13,41 @@ export interface OsmFuelStation {
   opening24h: boolean;
 }
 
-const OVERPASS_URL =
-  import.meta.env.VITE_OVERPASS_URL?.toString() ??
-  "https://overpass-api.de/api/interpreter";
+/**
+ * OpenStreetMap fuel stations are fetched through the Cloudflare Worker
+ * (`/api/osm/stations`), which queries the Overpass mirrors with a proper
+ * User-Agent and caches the result at the edge for a week.
+ *
+ * The public Overpass API is not reliable for direct browser use (it rate-limits
+ * and returns 429/504), which previously made brand logos disappear in
+ * production. Set `VITE_OSM_API_URL` to point elsewhere (e.g. a self-hosted
+ * Overpass) in development.
+ */
+const ENDPOINT =
+  import.meta.env.VITE_OSM_API_URL?.toString() ?? "/api/osm/stations";
 
-interface OverpassElement {
-  type: string;
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
+interface OsmStationsResponse {
+  stations?: OsmFuelStation[];
 }
 
-/**
- * Fetch OpenStreetMap fuel stations within a bounding box.
- * Used for the countries that have no per-station price source
- * (Belgium, Luxembourg, Switzerland).
- */
-export async function fetchOsmFuelStations(
+export async function fetchOsmStations(
   bounds: BoundingBox,
   { signal }: { signal?: AbortSignal } = {},
 ): Promise<OsmFuelStation[]> {
   const [west, south, east, north] = bounds;
-  const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://localhost";
+  const url = new URL(ENDPOINT, origin);
+  url.searchParams.set("west", String(west));
+  url.searchParams.set("south", String(south));
+  url.searchParams.set("east", String(east));
+  url.searchParams.set("north", String(north));
 
-  const response = await fetch(OVERPASS_URL, {
-    method: "POST",
-    signal,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ data: query }).toString(),
-  });
+  const response = await fetch(url, { signal });
   if (!response.ok) {
-    throw new Error(`Overpass request failed with status ${response.status}`);
+    throw new Error(`OSM stations request failed with status ${response.status}`);
   }
 
-  const payload = (await response.json()) as { elements?: OverpassElement[] };
-  const stations: OsmFuelStation[] = [];
-
-  for (const element of payload.elements ?? []) {
-    const lat = element.lat ?? element.center?.lat;
-    const lon = element.lon ?? element.center?.lon;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-
-    const tags = element.tags ?? {};
-    const street = tags["addr:street"];
-    const number = tags["addr:housenumber"];
-    const address = [number, street].filter(Boolean).join(" ").trim();
-
-    stations.push({
-      key: `${element.type}/${element.id}`,
-      lat: lat as number,
-      lon: lon as number,
-      brand: tags.brand ?? tags.operator ?? tags.name,
-      city: tags["addr:city"] ?? tags["addr:town"] ?? tags["addr:village"],
-      address: address || undefined,
-      postalCode: tags["addr:postcode"],
-      opening24h: tags.opening_hours === "24/7",
-    });
-  }
-
-  return stations;
+  const payload = (await response.json()) as OsmStationsResponse;
+  return payload.stations ?? [];
 }
