@@ -92,6 +92,9 @@ vi.mock("maplibre-gl", () => {
     flyTo() {
       return this;
     }
+    fitBounds() {
+      return this;
+    }
     getBounds() {
       return {
         getWest: () => -180,

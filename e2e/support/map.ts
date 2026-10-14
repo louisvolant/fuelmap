@@ -1,16 +1,17 @@
 import { type Page } from "@playwright/test";
 
-type GeoJsonFeature = {
-  properties?: { id?: string };
-  geometry?: { coordinates: [number, number] };
-};
-type GeoJsonCollection = { features: GeoJsonFeature[] };
-
 export type TestMap = {
   jumpTo: (options: unknown) => void;
   getLayer: (id: string) => unknown;
   getSource: (id: string) => {
-    serialize: () => { data: GeoJsonCollection };
+    serialize: () => {
+      data: {
+        features: {
+          properties?: { id?: string };
+          geometry?: { coordinates: [number, number] };
+        }[];
+      };
+    };
   };
   project: (lngLat: [number, number]) => { x: number; y: number };
   queryRenderedFeatures: (options: unknown) => { properties?: { id?: string } }[];
@@ -40,10 +41,30 @@ export async function waitForLayer(page: Page, layer: string): Promise<void> {
   );
 }
 
-/** Wait until stations are loaded and clustered on the map. */
+/**
+ * Wait until stations are loaded and rendered, whether they are clustered
+ * (country zoom) or individual (zoomed in around the user).
+ */
 export async function waitForStations(page: Page): Promise<void> {
   await waitForMap(page);
-  await waitForLayer(page, "station-clusters");
+  await page.waitForFunction(
+    () => {
+      const map = (window as unknown as { __fuelmapMap?: TestMap }).__fuelmapMap;
+      if (!map) return false;
+      return ["station-clusters", "station-points"].some((layer) => {
+        try {
+          return (
+            Boolean(map.getLayer(layer)) &&
+            map.queryRenderedFeatures({ layers: [layer] }).length > 0
+          );
+        } catch {
+          return false;
+        }
+      });
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
 }
 
 /** Move the camera over Paris at a zoom where markers are unclustered. */

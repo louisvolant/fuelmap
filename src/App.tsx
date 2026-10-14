@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { FavoritesButton } from "@/components/favorites/FavoritesButton";
 import { FavoritesSheet } from "@/components/favorites/FavoritesSheet";
@@ -26,6 +26,7 @@ import {
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
 import { useCountryStations } from "@/hooks/useCountryStations";
+import { useInitialView } from "@/hooks/useInitialView";
 import { useOsmBrands } from "@/hooks/useOsmBrands";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
@@ -46,6 +47,7 @@ const ROUTE_CORRIDOR_METERS = 2000;
 
 export default function App() {
   const countryCode = useCountryStore((state) => state.country);
+  const setCountry = useCountryStore((state) => state.setCountry);
   const country = getCountry(countryCode);
 
   const [view, setView] = useState<{ bounds: BoundingBox; zoom: number } | null>(
@@ -102,11 +104,23 @@ export default function App() {
     useFilterStore.getState().clearFuels();
   }, [countryCode]);
 
-  // Move the camera to the newly selected country.
+  // Move the camera to the newly selected country. The country change coming
+  // from the initial view (IP) must not override the "around me" framing.
+  const initialCountryRef = useRef(false);
   useEffect(() => {
     if (!map) return;
+    if (initialCountryRef.current) {
+      initialCountryRef.current = false;
+      return;
+    }
     map.flyTo({ center: country.center, zoom: country.zoom, duration: 800 });
   }, [map, country, countryCode]);
+
+  // On first open, frame the map around the user (geolocation, then IP).
+  useInitialView(map, countryCode, (code) => {
+    initialCountryRef.current = true;
+    setCountry(code);
+  });
 
   // Track the viewport (bounds + zoom): used for area-based loading (Germany)
   // and for the OpenStreetMap brand enrichment in France.

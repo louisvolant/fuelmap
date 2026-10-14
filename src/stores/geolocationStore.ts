@@ -33,12 +33,18 @@ export const useGeolocationStore = create<GeolocationState>((set) => ({
 
     set({ status: "locating" });
     navigator.geolocation.getCurrentPosition(
-      (result) =>
+      (result) => {
+        try {
+          localStorage.setItem("fuelmap.geoGranted", "1");
+        } catch {
+          // Ignore storage errors.
+        }
         set({
           position: [result.coords.longitude, result.coords.latitude],
           accuracy: result.coords.accuracy,
           status: "granted",
-        }),
+        });
+      },
       (error) =>
         set({
           status: error.code === PERMISSION_DENIED ? "denied" : "error",

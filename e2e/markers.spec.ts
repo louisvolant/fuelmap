@@ -74,7 +74,17 @@ test("renders individual markers when zoomed in", async ({ page }) => {
 
   await waitForLayer(page, "station-points");
 
-  const { pointCount, clusterCount, labelCount } = await page.evaluate(() => {
+  // Wait for the cluster tiles to be replaced at this zoom.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+        return map.queryRenderedFeatures({ layers: ["station-clusters"] }).length;
+      }),
+    )
+    .toBe(0);
+
+  const { pointCount, labelCount } = await page.evaluate(() => {
     const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
     const pointIds = new Set(
       map
@@ -83,17 +93,13 @@ test("renders individual markers when zoomed in", async ({ page }) => {
     );
     return {
       pointCount: pointIds.size,
-      clusterCount: map.queryRenderedFeatures({ layers: ["station-clusters"] })
-        .length,
       labelCount: map.queryRenderedFeatures({
         layers: ["station-price-labels"],
       }).length,
     };
   });
 
-  // At this zoom stations are no longer clustered.
   expect(pointCount).toBeGreaterThanOrEqual(1);
-  expect(clusterCount).toBe(0);
   // Price labels are rendered inside the bubbles.
   expect(labelCount).toBeGreaterThanOrEqual(1);
 });
