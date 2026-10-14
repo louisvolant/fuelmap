@@ -10,6 +10,7 @@ import { StationListSheet } from "@/components/list/StationListSheet";
 import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapContext } from "@/components/map/MapContext";
+import { MapStyleSwitcher } from "@/components/map/MapStyleSwitcher";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
@@ -32,7 +33,7 @@ import { useOsmBrands } from "@/hooks/useOsmBrands";
 import { usePanelPresentation } from "@/hooks/usePanelPresentation";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
-import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
+import { resolveMapStyle } from "@/lib/mapStyles";
 import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { stationsAlongRoute } from "@/lib/routeStations";
 import { sortStations } from "@/lib/sortStations";
@@ -42,6 +43,7 @@ import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
 import { useGeolocationStore } from "@/stores/geolocationStore";
 import { useLayoutStore } from "@/stores/layoutStore";
+import { useMapStyleStore } from "@/stores/mapStyleStore";
 import { useRouteStore } from "@/stores/routeStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -96,11 +98,12 @@ export default function App() {
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const loadFavorites = useFavoritesStore((state) => state.load);
   const theme = useTheme();
+  const styleId = useMapStyleStore((state) => state.styleId);
   const presentation = usePanelPresentation();
   const panelSide = useLayoutStore((state) => state.panelSide);
   const [map, setMap] = useState<MapLibreMap | null>(null);
 
-  const mapStyle = theme === "dark" ? DARK_MAP_STYLE : DEFAULT_MAP_STYLE;
+  const mapStyle = resolveMapStyle(styleId, theme);
 
   useEffect(() => {
     void loadFavorites();
@@ -249,6 +252,7 @@ export default function App() {
             />
             <SettingsButton />
           </div>
+          <MapStyleSwitcher />
           <RoutePanel />
           <MaxPriceBanner />
         </div>

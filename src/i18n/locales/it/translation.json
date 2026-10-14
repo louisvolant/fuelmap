@@ -95,7 +95,13 @@
     "loadingStations": "Caricamento distributori…",
     "loadError": "Impossibile caricare i distributori",
     "locate": "La mia posizione",
-    "locationDenied": "Posizione negata"
+    "locationDenied": "Posizione negata",
+    "style": "Sfondo mappa",
+    "styleAuto": "Auto (tema)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Scuro"
   },
   "fuels": {
     "gazole": "Gasolio",

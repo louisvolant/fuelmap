@@ -95,7 +95,13 @@
     "loadingStations": "Cargando gasolineras…",
     "loadError": "No se pudieron cargar las gasolineras",
     "locate": "Mi ubicación",
-    "locationDenied": "Ubicación denegada"
+    "locationDenied": "Ubicación denegada",
+    "style": "Fondo del mapa",
+    "styleAuto": "Auto (tema)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Oscuro"
   },
   "fuels": {
     "gazole": "Diésel",

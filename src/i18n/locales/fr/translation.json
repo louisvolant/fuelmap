@@ -95,7 +95,13 @@
     "loadingStations": "Chargement des stations…",
     "loadError": "Impossible de charger les stations",
     "locate": "Ma position",
-    "locationDenied": "Localisation refusée"
+    "locationDenied": "Localisation refusée",
+    "style": "Fond de carte",
+    "styleAuto": "Auto (thème)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Sombre"
   },
   "fuels": {
     "gazole": "Gazole",

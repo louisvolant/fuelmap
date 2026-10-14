@@ -27,6 +27,9 @@ French government fuel-price open data.
   bubble (TotalEnergies, Esso, E.Leclerc, Carrefour, Avia, Système U,
   Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan, Match, Cora, BP).
 - ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
+- 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
+  **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
+  theme. The choice is persisted.
 - 📋 **Sortable list** — stations ranked by price or by distance.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
   the stations along the driving route.
@@ -116,6 +119,11 @@ matching is alias-based (`src/lib/brands.ts`).
 
 - **[OpenFreeMap](https://openfreemap.org/)** — free, unlimited vector tiles from
   OpenStreetMap data, no registration or API key.
+- Four styles are available from a picker on the map: **Liberty** (default,
+  colourful), **Bright**, **Positron** (monochrome) and **Dark**, plus an
+  **Auto** mode that follows the UI theme. The choice is persisted. Switching
+  uses `map.setStyle()`; the app's sources, layers and brand images are
+  re-injected on `styledata`/`idle`, and the camera is left untouched.
 - Attribution: *OpenFreeMap © OpenMapTiles, Data from OpenStreetMap*.
 
 ### Phase 2 (planned)

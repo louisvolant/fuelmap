@@ -95,7 +95,13 @@
     "loadingStations": "Завантаження заправок…",
     "loadError": "Не вдалося завантажити заправки",
     "locate": "Моє місцезнаходження",
-    "locationDenied": "Доступ до геолокації відхилено"
+    "locationDenied": "Доступ до геолокації відхилено",
+    "style": "Фон карти",
+    "styleAuto": "Авто (тема)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Темний"
   },
   "fuels": {
     "gazole": "Дизель",

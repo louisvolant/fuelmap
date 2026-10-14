@@ -95,7 +95,13 @@
     "loadingStations": "Tankstations worden geladen…",
     "loadError": "Tankstations konden niet worden geladen",
     "locate": "Mijn locatie",
-    "locationDenied": "Locatie geweigerd"
+    "locationDenied": "Locatie geweigerd",
+    "style": "Kaartstijl",
+    "styleAuto": "Auto (thema)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Donker"
   },
   "fuels": {
     "gazole": "Diesel",

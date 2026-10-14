@@ -43,6 +43,9 @@ export function StationMarkers({
   const map = useMap();
   const onSelectRef = useRef(onSelect);
   const dataRef = useRef<FeatureCollection>(EMPTY_COLLECTION);
+  // Brands currently displayed; needed to re-register their SVG marks after a
+  // basemap style swap (images live inside the style and are dropped by it).
+  const brandIdsRef = useRef<Set<BrandId>>(new Set());
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -53,15 +56,16 @@ export function StationMarkers({
     [stations, activeFuelId, favoriteIds],
   );
 
-  // Register the SVG marks of the brands currently displayed.
+  // Track the brands currently displayed, and register their SVG marks
+  // (idempotent; `ensureLayers` also re-registers them after a style swap).
   useEffect(() => {
-    if (!map) return;
     const ids = new Set<BrandId>();
     for (const station of stations) {
       const id = matchBrand(station.brand);
       if (id) ids.add(id);
     }
-    if (ids.size > 0) void ensureBrandImages(map, ids);
+    brandIdsRef.current = ids;
+    if (map && ids.size > 0) void ensureBrandImages(map, ids);
   }, [map, stations]);
 
   useEffect(() => {
@@ -185,6 +189,11 @@ export function StationMarkers({
         }
 
         applyData();
+
+        // Brand marks belong to the style: re-register them after a style swap.
+        if (brandIdsRef.current.size > 0) {
+          void ensureBrandImages(map, brandIdsRef.current);
+        }
       } catch {
         // Style not ready yet: retry on the next `styledata` / `idle` event.
       }

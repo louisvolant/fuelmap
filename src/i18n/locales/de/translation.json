@@ -95,7 +95,13 @@
     "loadingStations": "Tankstellen werden geladen…",
     "loadError": "Tankstellen konnten nicht geladen werden",
     "locate": "Mein Standort",
-    "locationDenied": "Standort verweigert"
+    "locationDenied": "Standort verweigert",
+    "style": "Kartenstil",
+    "styleAuto": "Auto (Design)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Dunkel"
   },
   "fuels": {
     "gazole": "Diesel",

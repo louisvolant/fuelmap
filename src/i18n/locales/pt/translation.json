@@ -95,7 +95,13 @@
     "loadingStations": "A carregar os postos…",
     "loadError": "Não foi possível carregar os postos",
     "locate": "A minha localização",
-    "locationDenied": "Localização recusada"
+    "locationDenied": "Localização recusada",
+    "style": "Fundo do mapa",
+    "styleAuto": "Auto (tema)",
+    "styleLiberty": "Liberty",
+    "styleBright": "Bright",
+    "stylePositron": "Positron",
+    "styleDark": "Escuro"
   },
   "fuels": {
     "gazole": "Gasóleo",
