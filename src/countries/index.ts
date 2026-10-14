@@ -2,6 +2,7 @@ import type { CountryCode, CountryDefinition } from "./types";
 import { france } from "./fr";
 import { spain } from "./es";
 import { germany } from "./de";
+import { italy } from "./it";
 
 /**
  * Registry of enabled countries.
@@ -15,6 +16,7 @@ export const COUNTRIES: Partial<Record<CountryCode, CountryDefinition>> = {
   FR: france,
   ES: spain,
   DE: germany,
+  IT: italy,
 };
 
 export const DEFAULT_COUNTRY: CountryCode = "FR";

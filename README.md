@@ -19,8 +19,8 @@ French government fuel-price open data.
 ## Features
 
 - 🗺️ **Full-screen map** — OpenFreeMap vector tiles, no API key, no cost.
-- 🌍 **France, Spain and Germany** — switch country from the settings; each
-  country brings its own fuel catalog and price source.
+- 🌍 **France, Spain, Germany and Italy** — switch country from the settings;
+  each country brings its own fuel catalog and price source.
 - 🏷️ **Brand logos on markers** — a round brand mark is shown on each price
   bubble (TotalEnergies, Esso, E.Leclerc, Carrefour, Avia, Système U,
   Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan, Match, Cora, BP).
@@ -89,6 +89,16 @@ lightweight and fit inside a circular marker. To use official logos, replace the
 matching file (same name, 64×64 viewBox) — nothing else needs to change. Brand
 matching is alias-based (`src/lib/brands.ts`).
 
+### Italy
+
+- **Dataset:** *Prezzi praticati e anagrafica degli impianti* (MIMIT /
+  Osservaprezzi Carburanti), daily at 08:00, two `|`-separated CSV files.
+- **No CORS upstream**, so the Cloudflare Worker fetches both files, joins them by
+  station id and caches the result at the edge (`/api/it/stations`). Self-service
+  prices are preferred; brand-specific premium variants are folded into generic
+  premium fuels.
+- **License:** IODL 2.0.
+
 ### Basemap
 
 - **[OpenFreeMap](https://openfreemap.org/)** — free, unlimited vector tiles from
@@ -140,6 +150,11 @@ Open the printed URL (default http://localhost:5173).
 - **End-to-end tests** (Playwright) live in `e2e/`. They **intercept the fuel API**
   with fixtures (`e2e/fixtures/`) so tests are hermetic and deterministic, and run
   against both a desktop and a mobile viewport.
+- **Speed:** the heavy OpenFreeMap basemap (≈100 vector layers) is replaced by a
+  one-layer stub during E2E (`e2e/support/mockBasemap.ts`, injected by the shared
+  fixture in `e2e/support/fixtures.ts`). Tests only assert our own layers, so this
+  cuts the suite runtime by ~2.5×. Specs must import `test` from
+  `./support/fixtures` rather than `@playwright/test`.
 - Covered flows: map + markers, fuel and advanced filters, station detail, navigation
   hand-off, favorites persistence, geolocation radius, theme/language, and the PWA.
 
@@ -191,7 +206,9 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
 
 1. serves the built assets from `dist/` (with SPA fallback), and
 2. exposes `GET /api/de/stations` — a proxy in front of Tankerkönig so the
-   German API key stays server-side and never ships to the browser, and
+   German API key stays server-side and never ships to the browser,
+   `GET /api/it/stations` — which fetches and joins the two MIMIT CSV files
+   (no CORS upstream) and caches them at the edge, and
    `GET /api/geo` — a coarse location derived from the client IP
    (Cloudflare `request.cf`), used when geolocation is not authorized.
 

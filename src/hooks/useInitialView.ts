@@ -10,7 +10,7 @@ const MAX_INITIAL_ZOOM = 13;
 const GEO_GRANTED_KEY = "fuelmap.geoGranted";
 const VISITED_KEY = "fuelmap.visited";
 
-const SUPPORTED_COUNTRIES: CountryCode[] = ["FR", "ES", "DE"];
+const SUPPORTED_COUNTRIES: CountryCode[] = ["FR", "ES", "DE", "IT"];
 
 export interface InitialCamera {
   center: [number, number];

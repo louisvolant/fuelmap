@@ -1,13 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockSpainApi } from "./support/mockSpainApi";
 import { mockGermanyApi } from "./support/mockGermanyApi";
+import { mockItalyApi } from "./support/mockItalyApi";
 import { waitForStations } from "./support/map";
 
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockSpainApi(page);
   await mockGermanyApi(page);
+  await mockItalyApi(page);
   await page.goto("/");
   await waitForStations(page);
 });
@@ -30,6 +33,17 @@ test("switches to Germany and loads stations for the viewport", async ({
 
   // Germany is area-based: stations are fetched for the current viewport.
   await expect(page.getByText(/Stations:\s*3/)).toBeVisible({ timeout: 15_000 });
+});
+
+test("switches to Italy and loads Italian stations", async ({ page }) => {
+  await page.getByRole("button", { name: "Réglages" }).click();
+  await page.getByRole("combobox", { name: "Pays" }).selectOption("IT");
+
+  await expect(page.getByText(/Stations:\s*2/)).toBeVisible({ timeout: 15_000 });
+  // Italian fuel catalog is shown.
+  await expect(
+    page.getByRole("button", { name: "Essence", exact: true }),
+  ).toBeVisible();
 });
 
 test("resets the fuel filter when switching country", async ({ page }) => {

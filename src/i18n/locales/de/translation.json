@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "Frankreich", "DE": "Deutschland", "ES": "Spanien" },
+  "countries": { "FR": "Frankreich", "DE": "Deutschland", "ES": "Spanien", "IT": "Italien" },
   "app": {
     "name": "FuelMap",
     "tagline": "Finden Sie den günstigsten Kraftstoff in Ihrer Nähe"
@@ -106,7 +106,13 @@
     "glp": "Autogas",
     "gnc": "CNG",
     "diesel": "Diesel",
-    "e5": "Super E5"
+    "e5": "Super E5",
+    "benzina": "Benzin",
+    "benzinaPremium": "Premium-Benzin",
+    "gasolio": "Diesel",
+    "gasolioPremium": "Premium-Diesel",
+    "hvo": "HVO",
+    "metano": "CNG"
   },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten",

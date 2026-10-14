@@ -1,5 +1,5 @@
 {
-  "countries": { "FR": "Frankrijk", "DE": "Duitsland", "ES": "Spanje" },
+  "countries": { "FR": "Frankrijk", "DE": "Duitsland", "ES": "Spanje", "IT": "Italië" },
   "app": {
     "name": "FuelMap",
     "tagline": "Vind de goedkoopste brandstof bij jou in de buurt"
@@ -106,7 +106,13 @@
     "glp": "LPG",
     "gnc": "CNG",
     "diesel": "Diesel",
-    "e5": "Super E5"
+    "e5": "Super E5",
+    "benzina": "Benzine",
+    "benzinaPremium": "Premium benzine",
+    "gasolio": "Diesel",
+    "gasolioPremium": "Premium diesel",
+    "hvo": "HVO",
+    "metano": "CNG"
   },
   "errors": {
     "generic": "Er is een fout opgetreden",
