@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <rect width="64" height="64" rx="14" fill="#0f172a" />
-  <circle cx="32" cy="32" r="21" fill="#38bdf8" />
-  <g fill="#0f172a">
-    <rect x="25" y="22" width="4" height="20" />
-    <rect x="25" y="22" width="14" height="4" />
-    <rect x="25" y="30" width="12" height="4" />
+  <g fill="#e2e8f0">
+    <!-- pump body -->
+    <rect x="18" y="15" width="22" height="35" rx="3" />
+    <!-- base -->
+    <rect x="14" y="48" width="30" height="6" rx="2" />
+    <!-- hose -->
+    <rect x="39" y="22" width="9" height="4" rx="1.5" />
+    <rect x="44" y="22" width="4" height="22" rx="1.5" />
+    <!-- nozzle -->
+    <rect x="45" y="41" width="8" height="6" rx="2" />
   </g>
+  <!-- display -->
+  <rect x="23" y="20" width="12" height="10" rx="2" fill="#38bdf8" />
 </svg>

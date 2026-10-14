@@ -1,4 +1,5 @@
 // Generates the PWA icons as PNG files, without any external dependency.
+// The artwork is a stylized fuel pump drawn on a 64x64 grid.
 // Run with: node scripts/generate-icons.mjs
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -9,8 +10,18 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = resolve(ROOT, "public/icons");
 
 const BACKGROUND = [15, 23, 42]; // slate-900
-const CIRCLE = [56, 189, 248]; // sky-400
-const MARK = [15, 23, 42]; // slate-900
+const BODY = [226, 232, 240]; // slate-200
+const DISPLAY = [56, 189, 248]; // sky-400
+
+/** Rectangles in a 64x64 grid: [x0, y0, x1, y1, color]. Draw order matters. */
+const RECTS = [
+  [18, 15, 40, 50, BODY], // pump body
+  [23, 20, 35, 30, DISPLAY], // display
+  [14, 48, 44, 54, BODY], // base
+  [39, 22, 48, 26, BODY], // hose, horizontal
+  [44, 22, 48, 44, BODY], // hose, vertical
+  [45, 41, 53, 47, BODY], // nozzle
+];
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -59,30 +70,20 @@ function encodePng(width, height, pixels) {
   ]);
 }
 
-function inRect(x, y, [x0, y0, x1, y1]) {
-  return x >= x0 && x < x1 && y >= y0 && y < y1;
-}
-
-/** Draw the FuelMap icon: a sky circle with a dark "F". */
+/** Draw the FuelMap icon: a stylized fuel pump. */
 function drawIcon(size) {
   const pixels = Buffer.alloc(size * size * 4);
-  const center = size / 2;
-  const radius = size * 0.34;
-
-  const scale = size / 512;
-  const bars = [
-    [200, 180, 232, 332], // vertical
-    [200, 180, 312, 212], // top
-    [200, 244, 296, 272], // middle
-  ].map((bar) => bar.map((value) => value * scale));
+  const scale = size / 64;
 
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
-      const dx = x - center;
-      const dy = y - center;
+      const gx = x / scale;
+      const gy = y / scale;
+
       let color = BACKGROUND;
-      if (dx * dx + dy * dy <= radius * radius) color = CIRCLE;
-      if (bars.some((bar) => inRect(x, y, bar))) color = MARK;
+      for (const [x0, y0, x1, y1, rectColor] of RECTS) {
+        if (gx >= x0 && gx < x1 && gy >= y0 && gy < y1) color = rectColor;
+      }
 
       const offset = (y * size + x) * 4;
       pixels[offset] = color[0];
@@ -102,6 +103,6 @@ for (const size of [192, 512]) {
   console.log(`generated public/icons/icon-${size}.png`);
 }
 
-// Maskable icon: same artwork, safe within the maskable safe zone.
+// Maskable icon: same artwork, full-bleed background.
 writeFileSync(resolve(OUT_DIR, "icon-maskable-512.png"), drawIcon(512));
 console.log("generated public/icons/icon-maskable-512.png");
