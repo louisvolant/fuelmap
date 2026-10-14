@@ -35,7 +35,11 @@ French government fuel-price open data.
 - ⭐ **Local favorites** — stored in **IndexedDB**, highlighted on the map, offline-friendly.
 - 🎛️ **Advanced filters** — hide shortages, 24/7 automated pumps only, required
   services, and a radius around your position.
-- 📌 **Geolocation** — recenter on your position at any time.
+- 📌 **Geolocation** — the app opens around you (5–10 km) when geolocation is
+  already authorized, otherwise around the **IP-based location** (Cloudflare
+  `request.cf`), with a recenter button at any time.
+- 🪟 **Station details panel** — a right-hand slide-over on desktop and phones in
+  landscape, switchable to the left; a bottom sheet on small portrait screens.
 - 📈 **Fill-up history** — delegated to [FuelStats](https://www.fuelstats.net).
 - 🌗 **Light / dark theme**, following the system by default.
 - 🌍 **7 UI languages** — `fr`, `uk`, `de`, `es`, `pt`, `it`, `nl`.
@@ -187,7 +191,9 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
 
 1. serves the built assets from `dist/` (with SPA fallback), and
 2. exposes `GET /api/de/stations` — a proxy in front of Tankerkönig so the
-   German API key stays server-side and never ships to the browser.
+   German API key stays server-side and never ships to the browser, and
+   `GET /api/geo` — a coarse location derived from the client IP
+   (Cloudflare `request.cf`), used when geolocation is not authorized.
 
 Set the key once as a Worker secret:
 

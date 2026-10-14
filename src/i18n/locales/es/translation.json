@@ -33,6 +33,10 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas de Apple"
   },
+  "panel": {
+    "moveLeft": "Mostrar a la izquierda",
+    "moveRight": "Mostrar a la derecha"
+  },
   "history": {
     "title": "Historial de repostajes",
     "description": "Registra tus repostajes y tus ahorros con FuelStats, un servicio externo.",

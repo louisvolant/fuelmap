@@ -18,7 +18,7 @@ import { RouteLayer } from "@/components/route/RouteLayer";
 import { RoutePanel } from "@/components/route/RoutePanel";
 import { SettingsButton } from "@/components/settings/SettingsButton";
 import { SettingsSheet } from "@/components/settings/SettingsSheet";
-import { StationSheet } from "@/components/station/StationSheet";
+import { StationDetails } from "@/components/station/StationDetails";
 import { getCountry } from "@/countries";
 import type { BoundingBox } from "@/countries/types";
 import {
@@ -28,6 +28,7 @@ import {
 import { useCountryStations } from "@/hooks/useCountryStations";
 import { useInitialView } from "@/hooks/useInitialView";
 import { useOsmBrands } from "@/hooks/useOsmBrands";
+import { usePanelPresentation } from "@/hooks/usePanelPresentation";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { DARK_MAP_STYLE, DEFAULT_MAP_STYLE } from "@/lib/mapStyles";
@@ -39,8 +40,12 @@ import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
 import { useGeolocationStore } from "@/stores/geolocationStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { useRouteStore } from "@/stores/routeStore";
 import { useUiStore } from "@/stores/uiStore";
+
+/** Width reserved for the station details side panel, in pixels. */
+const PANEL_WIDTH = 400;
 
 /** Stations within this distance (meters) of the route are kept. */
 const ROUTE_CORRIDOR_METERS = 2000;
@@ -90,6 +95,8 @@ export default function App() {
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const loadFavorites = useFavoritesStore((state) => state.load);
   const theme = useTheme();
+  const presentation = usePanelPresentation();
+  const panelSide = useLayoutStore((state) => state.panelSide);
   const [map, setMap] = useState<MapLibreMap | null>(null);
 
   const mapStyle = theme === "dark" ? DARK_MAP_STYLE : DEFAULT_MAP_STYLE;
@@ -181,14 +188,28 @@ export default function App() {
     [enrichedStations, selectedStationId],
   );
 
-  // Recenter the camera on the selected station.
+  // Recenter on the selected station, leaving room for the side panel so the
+  // marker is not hidden behind it.
   useEffect(() => {
     if (!map || !selectedStation) return;
+    const padding =
+      presentation === "panel"
+        ? panelSide === "right"
+          ? { right: PANEL_WIDTH }
+          : { left: PANEL_WIDTH }
+        : undefined;
     map.easeTo({
       center: [selectedStation.lon, selectedStation.lat],
       zoom: Math.max(map.getZoom(), 14),
       duration: 500,
+      ...(padding ? { padding } : {}),
     });
+  }, [map, selectedStation, presentation, panelSide]);
+
+  // Clear the panel padding once the details are closed.
+  useEffect(() => {
+    if (!map || selectedStation) return;
+    map.easeTo({ padding: { top: 0, right: 0, bottom: 0, left: 0 } });
   }, [map, selectedStation]);
 
   return (
@@ -262,7 +283,7 @@ export default function App() {
           onClose={() => setOpenSheet(null)}
         />
 
-        <StationSheet
+        <StationDetails
           station={selectedStation}
           country={country}
           onClose={() => selectStation(null)}

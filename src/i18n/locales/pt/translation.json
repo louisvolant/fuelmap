@@ -33,6 +33,10 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mapas Apple"
   },
+  "panel": {
+    "moveLeft": "Mostrar à esquerda",
+    "moveRight": "Mostrar à direita"
+  },
   "history": {
     "title": "Histórico de abastecimentos",
     "description": "Registe os seus abastecimentos e poupanças com o FuelStats, um serviço externo.",

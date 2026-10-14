@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { StationSheet } from "@/components/station/StationSheet";
+import userEvent from "@testing-library/user-event";
+import { StationDetails } from "@/components/station/StationDetails";
 import { getCountry } from "@/countries";
 import type { NormalizedStation } from "@/countries/types";
+import { useLayoutStore } from "@/stores/layoutStore";
 
 const twoHoursAgo = new Date(Date.now() - (2 * 60 + 5) * 60 * 1000).toISOString();
 
@@ -35,10 +37,10 @@ const station: NormalizedStation = {
   sourceId: "1",
 };
 
-describe("StationSheet", () => {
+describe("StationDetails", () => {
   it("lists fuels with price, freshness and shortage", () => {
     render(
-      <StationSheet
+      <StationDetails
         station={station}
         country={getCountry("FR")}
         onClose={() => {}}
@@ -55,7 +57,7 @@ describe("StationSheet", () => {
 
   it("renders navigation hand-off links", () => {
     render(
-      <StationSheet
+      <StationDetails
         station={station}
         country={getCountry("FR")}
         onClose={() => {}}
@@ -72,7 +74,7 @@ describe("StationSheet", () => {
 
   it("sorts available fuels before unavailable ones", () => {
     render(
-      <StationSheet
+      <StationDetails
         station={station}
         country={getCountry("FR")}
         onClose={() => {}}
@@ -85,8 +87,28 @@ describe("StationSheet", () => {
 
   it("renders nothing without a station", () => {
     const { container } = render(
-      <StationSheet station={null} country={getCountry("FR")} onClose={() => {}} />,
+      <StationDetails station={null} country={getCountry("FR")} onClose={() => {}} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the details in a side panel and can switch side", async () => {
+    const user = userEvent.setup();
+    useLayoutStore.setState({ panelSide: "right" });
+
+    render(
+      <StationDetails
+        station={station}
+        country={getCountry("FR")}
+        onClose={() => {}}
+      />,
+    );
+
+    // jsdom's matchMedia reports a wide viewport: the side panel is used.
+    await user.click(screen.getByRole("button", { name: "Afficher à gauche" }));
+    expect(useLayoutStore.getState().panelSide).toBe("left");
+    expect(
+      screen.getByRole("button", { name: "Afficher à droite" }),
+    ).toBeInTheDocument();
   });
 });

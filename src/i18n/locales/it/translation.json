@@ -33,6 +33,10 @@
     "googleMaps": "Google Maps",
     "appleMaps": "Mappe Apple"
   },
+  "panel": {
+    "moveLeft": "Mostra a sinistra",
+    "moveRight": "Mostra a destra"
+  },
   "history": {
     "title": "Storico rifornimenti",
     "description": "Registra i tuoi rifornimenti e risparmi con FuelStats, un servizio esterno.",
