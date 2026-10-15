@@ -22,12 +22,12 @@ export const BRANDFETCH_DOMAINS: Record<BrandId, string> = {
   intermarche: "intermarche.com",
   netto: "netto.fr", // verify (Netto also exists in DE/DK)
   shell: "shell.com",
-  fulli: "fulli.fr",
+  fulli: "fulli.com",
   auchan: "auchan.fr",
   eni: "eni.com",
-  dyneff: "dyneff.com",
+  dyneff: "dyneff.fr",
   elan: "elan.fr", // verify
-  match: "supermarche-match.com", // verify
+  match: "match.fr", // verify
   cora: "cora.fr", // verify (Cora exists in several countries)
   bp: "bp.com",
 };
