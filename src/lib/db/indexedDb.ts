@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { CountryCode, NormalizedStation } from "@/countries/types";
+import type { BrandResolution } from "@/lib/brandResolutions";
 
 /** A locally saved favorite station. No account, no server: purely on-device. */
 export interface FavoriteRecord {
@@ -29,10 +30,14 @@ interface FuelMapDB extends DBSchema {
     key: string;
     value: MetaRecord;
   };
+  brandResolutions: {
+    key: string;
+    value: BrandResolution;
+  };
 }
 
 const DB_NAME = "fuelmap";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<FuelMapDB>> | null = null;
 
@@ -41,10 +46,20 @@ export function getDb(): Promise<IDBPDatabase<FuelMapDB>> {
   if (!dbPromise) {
     dbPromise = openDB<FuelMapDB>(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        const stations = db.createObjectStore("stations", { keyPath: "id" });
-        stations.createIndex("country", "country");
-        db.createObjectStore("favorites", { keyPath: "id" });
-        db.createObjectStore("meta", { keyPath: "key" });
+        if (!db.objectStoreNames.contains("stations")) {
+          const stations = db.createObjectStore("stations", { keyPath: "id" });
+          stations.createIndex("country", "country");
+        }
+        if (!db.objectStoreNames.contains("favorites")) {
+          db.createObjectStore("favorites", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          db.createObjectStore("meta", { keyPath: "key" });
+        }
+        // Long-lived brand overlay: stationId -> resolved brand (see brandResolutions).
+        if (!db.objectStoreNames.contains("brandResolutions")) {
+          db.createObjectStore("brandResolutions", { keyPath: "stationId" });
+        }
       },
     });
   }
@@ -121,6 +136,23 @@ export async function addFavorite(
 export async function removeFavorite(id: string): Promise<void> {
   const db = await getDb();
   await db.delete("favorites", id);
+}
+
+/** Persist resolved brands so logos render instantly on the next visit. */
+export async function saveBrandResolutions(
+  resolutions: BrandResolution[],
+): Promise<void> {
+  if (resolutions.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("brandResolutions", "readwrite");
+  await Promise.all(resolutions.map((resolution) => tx.store.put(resolution)));
+  await tx.done;
+}
+
+/** Read every cached brand resolution (filtered for freshness by callers). */
+export async function getAllBrandResolutions(): Promise<BrandResolution[]> {
+  const db = await getDb();
+  return db.getAll("brandResolutions");
 }
 
 /** Only used by tests to close the cached connection. */

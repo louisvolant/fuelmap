@@ -3,15 +3,18 @@ import type { NormalizedStation } from "@/countries/types";
 import {
   addFavorite,
   closeDb,
+  getAllBrandResolutions,
   getFavorites,
   getMeta,
   getStationsByCountry,
   isFavorite,
   lastSyncKey,
   removeFavorite,
+  saveBrandResolutions,
   saveStations,
   setMeta,
 } from "@/lib/db/indexedDb";
+import { BRAND_RESOLVER_VERSION } from "@/lib/brandResolutions";
 
 function makeStation(id: string, country: NormalizedStation["country"]): NormalizedStation {
   return {
@@ -55,5 +58,22 @@ describe("indexedDb", () => {
     expect(await getFavorites()).toHaveLength(1);
     await removeFavorite("FR:1");
     expect(await isFavorite("FR:1")).toBe(false);
+  });
+
+  it("persists brand resolutions across sessions", async () => {
+    await saveBrandResolutions([
+      {
+        stationId: "FR:1",
+        brand: "TotalEnergies",
+        lat: 48.85,
+        lon: 2.35,
+        resolvedAt: Date.now(),
+        resolverVersion: BRAND_RESOLVER_VERSION,
+      },
+    ]);
+    const resolutions = await getAllBrandResolutions();
+    expect(resolutions.map((resolution) => resolution.stationId)).toEqual([
+      "FR:1",
+    ]);
   });
 });
