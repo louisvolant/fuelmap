@@ -596,15 +596,20 @@ async function handleGermanStations(url: URL, env: Env): Promise<Response> {
     return json({ ok: false, message: "lat and lng are required" }, 400);
   }
 
+  if (!env.TANKERKOENIG_API_KEY) {
+    return json(
+      { ok: false, message: "Tankerkönig API key is not configured" },
+      503,
+    );
+  }
+
   const upstream = new URL(env.TANKERKOENIG_API_URL ?? DEFAULT_TANKERKOENIG_URL);
   upstream.searchParams.set("lat", lat);
   upstream.searchParams.set("lng", lng);
   upstream.searchParams.set("rad", rad);
   upstream.searchParams.set("sort", "dist");
   upstream.searchParams.set("type", "all");
-  if (env.TANKERKOENIG_API_KEY) {
-    upstream.searchParams.set("apikey", env.TANKERKOENIG_API_KEY);
-  }
+  upstream.searchParams.set("apikey", env.TANKERKOENIG_API_KEY);
 
   const response = await fetch(upstream, {
     headers: { accept: "application/json" },

@@ -190,3 +190,21 @@ describe("GET /api/osm/v3/stations", () => {
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("German stations proxy", () => {
+  it("returns 503 when TANKERKOENIG_API_KEY is not configured", async () => {
+    const env = {
+      ASSETS: { fetch: vi.fn() },
+      BRANDS_BUCKET: makeBucket(),
+    } as unknown as Parameters<typeof worker.fetch>[1];
+
+    const request = new Request(
+      "https://fuelmap.test/api/de/stations?lat=52.5&lng=13.4",
+    );
+    const response = await worker.fetch(request, env, makeContext());
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { ok: boolean; message: string };
+    expect(body.ok).toBe(false);
+    expect(body.message).toContain("not configured");
+  });
+});

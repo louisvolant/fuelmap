@@ -156,6 +156,13 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 > here for identification only; this app is not affiliated with, nor endorsed by,
 > these brands.
 
+### Germany
+
+- **Dataset:** MTS-K / Tankerkönig (near-real-time fuel prices, CC BY 4.0).
+- **Proxy:** `/api/de/stations` proxied by Cloudflare Worker with server-side `TANKERKOENIG_API_KEY`
+  (returns 503 with clear message if unconfigured).
+- Area-based query (`lat`, `lng`, `rad` up to 25 km).
+
 ### Italy
 
 - **Dataset:** *Prezzi praticati e anagrafica degli impianti* (MIMIT /
