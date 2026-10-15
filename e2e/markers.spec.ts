@@ -113,10 +113,14 @@ test("never shows an unclustered bubble without its brand mark", async ({
       })
       .toBeGreaterThan(0);
 
-    const counts = await renderedCounts(page);
-    if (counts.points > 0) {
-      expect(counts.brands).toBeGreaterThan(0);
-    }
+    // The invariant, polled so a transient frame cannot make it flaky:
+    // either there is no individual bubble yet, or it carries its brand mark.
+    await expect
+      .poll(async () => {
+        const counts = await renderedCounts(page);
+        return counts.points === 0 || counts.brands > 0;
+      }, { timeout: 10_000 })
+      .toBe(true);
   }
 });
 
