@@ -398,6 +398,13 @@ const OSM_CACHE_TTL = 7 * 24 * 60 * 60;
  * are ignored instead of being served for a week.
  */
 const OSM_CACHE_VERSION = 2;
+/**
+ * Public path of the endpoint. **Versioned on purpose**: responses of the older
+ * path are stuck in Cloudflare's edge cache (it ignores query strings, so a
+ * `?v=` bump would not help) and one transient empty result there hides every
+ * brand in the area for a week. A new path starts from a clean slate.
+ */
+const OSM_STATIONS_PATH = `/api/osm/v${OSM_CACHE_VERSION}/stations`;
 
 interface OverpassElement {
   type: string;
@@ -430,8 +437,15 @@ async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
         body: new URLSearchParams({ data: query }).toString(),
       });
       if (!response.ok) continue;
-      const payload = (await response.json()) as { elements?: OverpassElement[] };
-      if (Array.isArray(payload.elements)) return payload.elements;
+      const payload = (await response.json()) as {
+        elements?: OverpassElement[];
+        remark?: string;
+      };
+      // A 200 can still be a failure: Overpass reports timeouts and rate limits
+      // in `remark`, with an empty `elements` array.
+      if (Array.isArray(payload.elements) && !payload.remark) {
+        return payload.elements;
+      }
     } catch {
       // Try the next mirror.
     }
@@ -458,11 +472,21 @@ async function handleOsmStations(
   }
 
   const cacheKey = new Request(
-    `https://fuelmap.internal/api/osm/stations?v=${OSM_CACHE_VERSION}&w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
+    `https://fuelmap.internal${OSM_STATIONS_PATH}?w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
     { method: "GET" },
   );
   const cached = await caches.default.match(cacheKey);
-  if (cached) return cached;
+  // `no-store` on every answer: the Cache API entry above is the single cache,
+  // and letting the edge keep its own copy is what turned one transient empty
+  // result into a week-long outage of the brand marks.
+  if (cached) {
+    return new Response(cached.body, {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
+  }
 
   const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
   const elements = await queryOverpass(query);
@@ -499,16 +523,28 @@ async function handleOsmStations(
     ];
   });
 
-  const response = json({ stations });
-  const headers = new Headers(response.headers);
-  headers.set("cache-control", `public, max-age=${OSM_CACHE_TTL}`);
+  const payload = JSON.stringify({ stations });
+
+  // The Cache API entry is the single cache for this endpoint, refreshed daily
+  // and versioned (see `OSM_CACHE_VERSION`).
   ctx.waitUntil(
     caches.default.put(
       cacheKey,
-      new Response(response.clone().body, { status: 200, headers }),
+      new Response(payload, {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": `public, max-age=${OSM_CACHE_TTL}`,
+        },
+      }),
     ),
   );
-  return response;
+
+  return new Response(payload, {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 }
 
 function json(body: unknown, status = 200): Response {
@@ -669,7 +705,10 @@ export default {
       return handleMaxPrices(url, ctx);
     }
 
-    if (url.pathname === "/api/osm/stations") {
+    if (
+      url.pathname === "/api/osm/stations" ||
+      url.pathname === OSM_STATIONS_PATH
+    ) {
       return handleOsmStations(url, ctx);
     }
 

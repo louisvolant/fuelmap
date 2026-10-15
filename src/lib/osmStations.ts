@@ -24,7 +24,7 @@ export interface OsmFuelStation {
  * Overpass) in development.
  */
 const ENDPOINT =
-  import.meta.env.VITE_OSM_API_URL?.toString() ?? "/api/osm/stations";
+  import.meta.env.VITE_OSM_API_URL?.toString() ?? "/api/osm/v2/stations";
 
 interface OsmStationsResponse {
   stations?: OsmFuelStation[];
