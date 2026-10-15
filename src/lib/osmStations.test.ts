@@ -21,7 +21,7 @@ describe("fetchOsmStations", () => {
     await fetchOsmStations(BOUNDS);
 
     const requested = String(spy.mock.calls[0][0]);
-    expect(requested).toContain("/api/osm/stations");
+    expect(requested).toContain("/api/osm/v2/stations");
     expect(requested).toContain("west=2.3");
     expect(requested).toContain("south=48.8");
     expect(requested).toContain("east=2.4");
