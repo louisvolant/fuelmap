@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, Point } from "geojson";
 import type { NormalizedStation } from "@/countries/types";
 import { brandImageId, matchBrand } from "@/lib/brands";
+import { DEFAULT_BRAND_IMAGE_ID } from "@/lib/brandImages";
 import { displayFuel } from "@/lib/stationUtils";
 import { formatPriceCompact } from "@/lib/format";
 
@@ -69,11 +70,15 @@ export function stationsToFeatureCollection(
     const fuel = displayFuel(station, activeFuelId);
     const price = fuel?.price;
     const brand = matchBrand(station.brand);
-    const brandImage = brand ? brandImageId(brand) : "";
     const hasPrice = typeof price === "number";
     const dimmed = showPrices && !hasPrice;
     // No logo to draw: the disc carries the price so it is never left blank.
-    const priceInDisc = hasPrice && !brandImage;
+    const priceInDisc = hasPrice && !brand;
+    const brandImage = brand
+      ? brandImageId(brand)
+      : priceInDisc
+        ? ""
+        : (!dimmed && !showPrices ? DEFAULT_BRAND_IMAGE_ID : "");
 
     // A priced country with neither a price nor a brand has nothing to show.
     if (dimmed && !brandImage) continue;

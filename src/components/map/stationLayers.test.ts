@@ -75,6 +75,7 @@ describe("stationsToFeatureCollection", () => {
     });
     expect(collection.features).toHaveLength(1);
     expect(collection.features[0].properties?.dimmed).toBe(false);
+    expect(collection.features[0].properties?.brandImage).toBe("brand-default");
   });
 
   it("resolves the brand image from the station brand", () => {

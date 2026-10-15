@@ -28,7 +28,8 @@ French government fuel-price open data.
   Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
   Match, Cora, BP). When the brand is unknown (the French open data exposes none
   before the OpenStreetMap enrichment lands) the bubble carries the selected
-  fuel's price instead, so a bubble is **never** drawn blank. From zoom 13.5 a
+  fuel's price instead, and unpriced unbranded bubbles display a generic fuel
+  pump mark, so a bubble is **never** drawn blank. From zoom 13.5 a
   branded bubble opens into a capsule: mark on the left, the selected fuel's
   price in a rounded capsule right behind it.
 - 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has

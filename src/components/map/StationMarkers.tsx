@@ -4,6 +4,7 @@ import type { GeoJSONSource, MapLayerMouseEvent } from "maplibre-gl";
 import type { NormalizedStation } from "@/countries/types";
 import {
   ensureBrandImages,
+  ensureDefaultBrandImage,
   ensurePricePillImage,
   PRICE_PILL_IMAGE_ID,
 } from "@/lib/brandImages";
@@ -264,6 +265,7 @@ export function StationMarkers({
 
         // Images belong to the style: re-register them after a style swap.
         void ensurePricePillImage(map);
+        void ensureDefaultBrandImage(map);
         if (brandIdsRef.current.size > 0) {
           void ensureBrandImages(map, brandIdsRef.current);
         }

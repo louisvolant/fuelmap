@@ -91,6 +91,7 @@ export async function ensureBrandImages(
   map: MapLibreMap,
   brandIds: Iterable<BrandId>,
 ): Promise<void> {
+  let added = false;
   for (const id of brandIds) {
     const imageId = brandImageId(id);
     if (map.hasImage(imageId)) continue;
@@ -98,10 +99,34 @@ export async function ensureBrandImages(
       const imageData = await loadBrandLogo(id);
       if (!map.hasImage(imageId)) {
         map.addImage(imageId, imageData, { pixelRatio: 2 });
+        added = true;
       }
     } catch {
       // Ignore: the price marker is still rendered without a logo.
     }
+  }
+  if (added) {
+    map.triggerRepaint?.();
+  }
+}
+
+/** Fallback pump image used when a station has no brand and no price. */
+export const DEFAULT_BRAND_IMAGE_ID = "brand-default";
+export const DEFAULT_PUMP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#f8fafc" stroke="#64748b" stroke-width="2.5"/><path d="M22 19h12a2 2 0 0 1 2 2v24H20V21a2 2 0 0 1 2-2zm2 5v7h8v-7h-8zm12 3h2a3 3 0 0 1 3 3v8a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1v-8a1 1 0 0 1 1-1h1v9a3 3 0 0 1-3 3h-1a4 4 0 0 1-4-4v-8a1 1 0 0 0-1-1h-1v-2z" fill="#334155"/></svg>`;
+
+/** Register the default generic fuel pump icon. */
+export async function ensureDefaultBrandImage(map: MapLibreMap): Promise<void> {
+  if (map.hasImage(DEFAULT_BRAND_IMAGE_ID)) return;
+  try {
+    const image = await loadImage(
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(DEFAULT_PUMP_SVG)}`,
+    );
+    if (!map.hasImage(DEFAULT_BRAND_IMAGE_ID)) {
+      map.addImage(DEFAULT_BRAND_IMAGE_ID, toSquareImageData(image), { pixelRatio: 2 });
+      map.triggerRepaint?.();
+    }
+  } catch {
+    // Ignore.
   }
 }
 
@@ -119,6 +144,7 @@ export async function ensurePricePillImage(map: MapLibreMap): Promise<void> {
     if (!map.hasImage(PRICE_PILL_IMAGE_ID)) {
       // Keep the capsule's aspect ratio: `icon-text-fit` stretches it to the text.
       map.addImage(PRICE_PILL_IMAGE_ID, toImageData(image), { pixelRatio: 2 });
+      map.triggerRepaint?.();
     }
   } catch {
     // Ignore: the price is still rendered without its capsule.
