@@ -1,17 +1,28 @@
-// Checks the Brandfetch "brand → domain" table against the live Brand API.
+// Checks the Brandfetch integration end to end, from the domain table to the
+// actual logo bytes.
 //
 // Usage:
-//   BRANDFETCH_API_KEY=xxxxxxxx node scripts/check-brand-domains.mjs
+//   BRANDFETCH_API_KEY=xxxxxxxx node scripts/check-brand-domains.mjs [brand…]
 //
-// It reports, for every brand, whether the domain resolves, which logo variant
-// would be picked (type/theme/format) and the brand name Brandfetch returns.
-// Use it to validate the domains flagged `// verify` in src/lib/brandfetch.ts.
-import { BRANDFETCH_DOMAINS, pickBrandfetchLogo } from "../src/lib/brandfetch.ts";
+// For every brand it reports whether the domain resolves, which assets the Brand
+// API returns, and — the part that matters — whether those assets can actually be
+// downloaded. Brandfetch's Logo CDN answers 200 with an **HTML documentation
+// page** for links it refuses to serve, so an HTTP 200 alone proves nothing:
+// the bytes are sniffed here exactly like the Worker does before caching them.
+//
+// With no argument every brand is checked; pass ids to focus on a few.
+import {
+  BRANDFETCH_DOMAINS,
+  assetHostPath,
+  credentialedAssetUrl,
+  pickBrandfetchLogos,
+  sniffImageFormat,
+} from "../src/lib/brandfetch.ts";
 
 const apiKey = process.env.BRANDFETCH_API_KEY;
 if (!apiKey) {
   console.error(
-    "Missing BRANDFETCH_API_KEY.\nUsage: BRANDFETCH_API_KEY=xxxxxxxx node scripts/check-brand-domains.mjs",
+    "Missing BRANDFETCH_API_KEY.\nUsage: BRANDFETCH_API_KEY=xxxxxxxx node scripts/check-brand-domains.mjs [brand…]",
   );
   process.exit(1);
 }
@@ -19,9 +30,22 @@ if (!apiKey) {
 const base =
   process.env.BRANDFETCH_API_URL ?? "https://api.brandfetch.io/v2/brands";
 
-const rows = [];
+const requested = process.argv.slice(2);
+const ids = requested.length > 0 ? requested : Object.keys(BRANDFETCH_DOMAINS);
+const MAX_CANDIDATES = 4;
 
-for (const [id, domain] of Object.entries(BRANDFETCH_DOMAINS)) {
+let usable = 0;
+
+for (const id of ids) {
+  const domain = BRANDFETCH_DOMAINS[id];
+  if (!domain) {
+    console.log(`${id}\n  unknown brand id\n`);
+    continue;
+  }
+
+  console.log(`${id}  (${domain})`);
+
+  let brand;
   try {
     const response = await fetch(`${base}/${encodeURIComponent(domain)}`, {
       headers: {
@@ -29,55 +53,58 @@ for (const [id, domain] of Object.entries(BRANDFETCH_DOMAINS)) {
         accept: "application/json",
       },
     });
-
+    const contentType = response.headers.get("content-type") ?? "";
     if (!response.ok) {
-      rows.push({ id, domain, status: `api_${response.status}`, logo: "-", name: "" });
+      console.log(
+        `  api     ${response.status} ${contentType} ${(await response.text()).slice(0, 120)}`,
+      );
+      console.log("");
       continue;
     }
-
-    const brand = await response.json();
-    const logo = pickBrandfetchLogo(brand);
-    rows.push({
-      id,
-      domain,
-      status: "ok",
-      logo: logo ? `${logo.type}/${logo.theme ?? "-"}/${logo.format}` : "none",
-      name: brand.name ?? "",
-    });
-  } catch (error) {
-    rows.push({
-      id,
-      domain,
-      status: "error",
-      logo: "-",
-      name: String(error).slice(0, 40),
-    });
-  }
-}
-
-const idWidth = Math.max(...rows.map((row) => row.id.length));
-const domainWidth = Math.max(...rows.map((row) => row.domain.length));
-
-console.log(
-  `${"brand".padEnd(idWidth)}  ${"domain".padEnd(domainWidth)}  ${"status".padEnd(9)} ${"logo".padEnd(20)} name`,
-);
-for (const row of rows) {
-  console.log(
-    `${row.id.padEnd(idWidth)}  ${row.domain.padEnd(domainWidth)}  ${row.status.padEnd(9)} ${row.logo.padEnd(20)} ${row.name}`,
-  );
-}
-
-const needsAttention = rows.filter(
-  (row) => row.status !== "ok" || row.logo === "none",
-);
-console.log(
-  `\n${rows.length - needsAttention.length}/${rows.length} brands resolved with a usable logo.`,
-);
-if (needsAttention.length > 0) {
-  console.log("Needs attention:");
-  for (const row of needsAttention) {
+    brand = await response.json();
+    const logos = brand.logos ?? [];
     console.log(
-      ` - ${row.id} (${row.domain}): ${row.status}${row.logo === "none" ? " — no logo of a usable type" : ""}`,
+      `  api     200 ${contentType} name="${brand.name ?? ""}" logos=${logos.length}`,
     );
+  } catch (error) {
+    console.log(`  api     failed: ${String(error).slice(0, 140)}\n`);
+    continue;
   }
+
+  const candidates = pickBrandfetchLogos(brand).slice(0, MAX_CANDIDATES);
+  if (candidates.length === 0) {
+    console.log("  assets  none proposed by the API\n");
+    continue;
+  }
+
+  let found = false;
+  for (const [index, candidate] of candidates.entries()) {
+    const url = credentialedAssetUrl(candidate.src, apiKey);
+    const label = `${assetHostPath(url)}${url.includes("?") ? "?…" : ""}`;
+    try {
+      const asset = await fetch(url);
+      if (!asset.ok) {
+        console.log(`  #${index + 1}  ${label}  -> ${asset.status}`);
+        continue;
+      }
+      const bytes = new Uint8Array(await asset.arrayBuffer());
+      const sniffed = sniffImageFormat(bytes);
+      const contentType = asset.headers.get("content-type") ?? "";
+      console.log(
+        `  #${index + 1}  ${label}  -> 200 ${contentType}, ${bytes.byteLength} B, ` +
+          (sniffed ? `${sniffed} — usable` : "no image signature (HTML page?)"),
+      );
+      if (sniffed) {
+        found = true;
+        break;
+      }
+    } catch (error) {
+      console.log(`  #${index + 1}  ${label}  -> failed: ${String(error).slice(0, 80)}`);
+    }
+  }
+
+  if (found) usable += 1;
+  console.log(`  result  ${found ? "usable logo found" : "NO usable logo"}\n`);
 }
+
+console.log(`${usable}/${ids.length} brands resolved with a downloadable logo.`);
