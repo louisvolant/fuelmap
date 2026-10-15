@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCountry } from "@/countries";
 import type {
@@ -7,13 +7,21 @@ import type {
   NormalizedStation,
 } from "@/countries/types";
 import {
+  getAllBrandResolutions,
   getMeta,
   getStationsByCountry,
   lastSyncKey,
+  saveBrandResolutions,
   saveStations,
   setMeta,
 } from "@/lib/db/indexedDb";
 import { BRAND_FETCH_MIN_ZOOM } from "@/components/map/stationLayers";
+import {
+  applyBrandResolutions,
+  collectNewResolutions,
+  isResolutionFresh,
+  type BrandResolution,
+} from "@/lib/brandResolutions";
 import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { useAreaStationsStore } from "@/stores/areaStationsStore";
 import { useOsmStations } from "./useOsmStations";
@@ -126,6 +134,34 @@ export function useCountryStations(
   const source = definition.dataSource;
   const bulk = useBulkStations(country);
   const area = useAreaStations(country, bounds);
+  const [resolutions, setResolutions] = useState<Map<string, BrandResolution>>(
+    () => new Map(),
+  );
+
+  // Load the persistent brand overlay once: logos render instantly, before any
+  // OpenStreetMap fetch for the current viewport resolves.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const cached = await getAllBrandResolutions();
+        if (cancelled) return;
+        const now = Date.now();
+        setResolutions(
+          new Map(
+            cached
+              .filter((resolution) => isResolutionFresh(resolution, now))
+              .map((resolution) => [resolution.stationId, resolution]),
+          ),
+        );
+      } catch {
+        // Overlay is best-effort: OSM enrichment still works without it.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const needsEnrichment = Boolean(definition.needsBrandEnrichment);
   const osmBounds =
@@ -137,12 +173,31 @@ export function useCountryStations(
   const rawStations =
     source?.kind === "area" ? area.stations : (bulk.data ?? EMPTY_STATIONS);
 
+  // Fast path: apply remembered brands synchronously, then let OSM fill the gaps.
+  const cachedStations = useMemo(() => {
+    if (!needsEnrichment || resolutions.size === 0) return rawStations;
+    return applyBrandResolutions(rawStations, resolutions);
+  }, [needsEnrichment, rawStations, resolutions]);
+
   const stations = useMemo(() => {
     if (!needsEnrichment || !osm.data || osm.data.length === 0) {
-      return rawStations;
+      return cachedStations;
     }
-    return enrichStationsWithBrands(rawStations, osm.data);
-  }, [needsEnrichment, rawStations, osm.data]);
+    return enrichStationsWithBrands(cachedStations, osm.data);
+  }, [needsEnrichment, cachedStations, osm.data]);
+
+  // Persist newly enriched brands so the next visit skips the OSM wait.
+  useEffect(() => {
+    if (!needsEnrichment || stations.length === 0) return;
+    const fresh = collectNewResolutions(cachedStations, stations);
+    if (fresh.length === 0) return;
+    setResolutions((previous) => {
+      const next = new Map(previous);
+      for (const resolution of fresh) next.set(resolution.stationId, resolution);
+      return next;
+    });
+    void saveBrandResolutions(fresh).catch(() => {});
+  }, [needsEnrichment, cachedStations, stations]);
 
   if (source?.kind === "area") {
     return {

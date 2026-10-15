@@ -57,8 +57,12 @@ describe("brandResolutions", () => {
   });
 
   it("collects only newly branded stations for persistence", () => {
-    const before = [{ id: "FR:1", brand: undefined, lat: 48.85, lon: 2.35 }];
-    const after = [{ id: "FR:1", brand: "TotalEnergies", lat: 48.85, lon: 2.35 }];
+    const before: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: undefined, lat: 48.85, lon: 2.35 },
+    ];
+    const after: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: "TotalEnergies", lat: 48.85, lon: 2.35 },
+    ];
     const collected = collectNewResolutions(before, after);
     expect(collected).toHaveLength(1);
     expect(collected[0]).toMatchObject({
@@ -74,5 +78,23 @@ describe("brandResolutions", () => {
     expect(nudged).toBe(first);
     const far = stableBboxKey([3.0, 48.851, 3.1, 48.949]);
     expect(far).not.toBe(first);
+  });
+
+  it("round-trips enriched brands through persistence", () => {
+    const fresh: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: undefined, lat: 48.85, lon: 2.35 },
+      { id: "FR:2", brand: undefined, lat: 48.86, lon: 2.36 },
+    ];
+    const enriched: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: "TotalEnergies", lat: 48.85, lon: 2.35 },
+      { id: "FR:2", brand: undefined, lat: 48.86, lon: 2.36 },
+    ];
+    const saved = collectNewResolutions(fresh, enriched);
+    expect(saved).toHaveLength(1);
+
+    // Simulate a reload: raw stations without brands plus the saved overlay.
+    const reloaded = applyBrandResolutions(fresh, new Map(saved.map((r) => [r.stationId, r])));
+    expect(reloaded[0].brand).toBe("TotalEnergies");
+    expect(reloaded[1].brand).toBeUndefined();
   });
 });
