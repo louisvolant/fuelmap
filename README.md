@@ -123,6 +123,10 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
   `/brands/report.json` (per-brand status of the last full refresh: `ok`,
   `no_logo`, `api_404`…). Domains flagged `// verify` in `src/lib/brandfetch.ts`
   still need a visual check (Netto FR/DE, Cora, Shell/BP).
+- `npm run brands:check` (with `BRANDFETCH_API_KEY` in the environment) verifies
+  the whole name → domain table against the live Brand API and prints, per brand,
+  the resolved name and the picked logo variant — the fastest way to fix the
+  domains flagged `// verify`.
 - The client always tries `/brands/<id>` first and falls back to the bundled SVG,
   so it never waits for a third party and keeps working offline.
 
