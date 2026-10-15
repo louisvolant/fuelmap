@@ -11,16 +11,18 @@ const POINT_LAYER = "station-points";
 const BRAND_LAYER = "station-brands";
 const LABEL_LAYER = "station-price-labels";
 
-/** Zoom up to which stations are clustered. */
+/** Zoom up to which nearby stations are grouped into cluster bubbles. */
 export const CLUSTER_MAX_ZOOM = 12;
 /**
- * Zoom from which individual markers (and their brand marks) are shown.
+ * Zoom from which brand data is fetched for countries that need an OpenStreetMap
+ * enrichment (see `hooks/useOsmStations`).
  *
- * Derived from the clustering threshold on purpose: stations are unclustered as
- * soon as the zoom goes past `CLUSTER_MAX_ZOOM`, so this guarantees there is
- * never a bubble on screen without its brand mark.
+ * It is only a *fetch* threshold, never a *display* one: clustering is
+ * radius-based, so isolated stations already show as individual bubbles below
+ * `CLUSTER_MAX_ZOOM`. Brand marks are therefore not tied to a zoom level at all
+ * — a bubble always carries the logo of its brand.
  */
-export const LOGO_MIN_ZOOM = CLUSTER_MAX_ZOOM;
+export const BRAND_FETCH_MIN_ZOOM = CLUSTER_MAX_ZOOM;
 /** Zoom from which the price is shown next to the brand mark. */
 export const PRICE_MIN_ZOOM = 13.5;
 

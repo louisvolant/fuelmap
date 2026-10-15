@@ -38,7 +38,7 @@ import { resolveMapStyle } from "@/lib/mapStyles";
 import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { stationsAlongRoute } from "@/lib/routeStations";
 import { sortStations } from "@/lib/sortStations";
-import { LOGO_MIN_ZOOM } from "@/components/map/stationLayers";
+import { BRAND_FETCH_MIN_ZOOM } from "@/components/map/stationLayers";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
@@ -70,7 +70,7 @@ export default function App() {
 
   const osmStations = useOsmStations(
     countryCode,
-    view && view.zoom >= LOGO_MIN_ZOOM ? view.bounds : null,
+    view && view.zoom >= BRAND_FETCH_MIN_ZOOM ? view.bounds : null,
   );
 
   const enrichedStations = useMemo(

@@ -77,3 +77,26 @@ test("enriches French stations with brands from OpenStreetMap", async ({
     )
     .toBe("brand-totalenergies");
 });
+
+test("does not tie brand marks to a zoom level", async ({ page }) => {
+  // Clustering is radius-based, so individual bubbles also exist *below*
+  // CLUSTER_MAX_ZOOM: a bubble must therefore always carry its logo.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean(
+          (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap.getLayer(
+            "station-brands",
+          ),
+        ),
+      ),
+    )
+    .toBe(true);
+
+  const minzoom = await page.evaluate(() => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    return (map.getLayer("station-brands") as { minzoom?: number }).minzoom;
+  });
+
+  expect(minzoom).toBeUndefined();
+});

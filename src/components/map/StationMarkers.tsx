@@ -11,7 +11,6 @@ import { matchBrand, type BrandId } from "@/lib/brands";
 import { useMap } from "./MapContext";
 import {
   CLUSTER_MAX_ZOOM,
-  LOGO_MIN_ZOOM,
   PRICE_MIN_ZOOM,
   STATION_LAYERS,
   stationsToFeatureCollection,
@@ -40,8 +39,8 @@ interface StationMarkersProps {
  * Renders stations as a clustered GeoJSON layer.
  *
  * Marker anatomy, zoom by zoom:
- * - clustered dots at country scale;
- * - from `LOGO_MIN_ZOOM`: a round white bubble holding the brand mark;
+ * - clustered bubbles at country scale;
+ * - individual bubbles carry their brand mark whenever they are drawn;
  * - from `PRICE_MIN_ZOOM`: the bubble opens into a capsule — brand mark on the
  *   left, price in a rounded capsule right behind it.
  *
@@ -198,12 +197,13 @@ export function StationMarkers({
         }
 
         // Brand mark, drawn above the bubble and the price capsule.
+        // No minzoom on purpose: clustering is radius-based, so individual
+        // bubbles also exist below CLUSTER_MAX_ZOOM and must carry their logo.
         if (!map.getLayer(BRAND_LAYER)) {
           map.addLayer({
             id: BRAND_LAYER,
             type: "symbol",
             source: SOURCE_ID,
-            minzoom: LOGO_MIN_ZOOM,
             filter: [
               "all",
               ["!", ["has", "point_count"]],

@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedStation } from "@/countries/types";
 import {
+  BRAND_FETCH_MIN_ZOOM,
   CLUSTER_MAX_ZOOM,
-  LOGO_MIN_ZOOM,
   PRICE_MIN_ZOOM,
   stationsToFeatureCollection,
 } from "@/components/map/stationLayers";
 
 describe("zoom thresholds", () => {
-  it("never shows an unclustered bubble without its brand mark", () => {
-    // Stations are unclustered above CLUSTER_MAX_ZOOM, so the brand marks must
-    // be visible from that same zoom: otherwise there is a band of empty bubbles.
-    expect(LOGO_MIN_ZOOM).toBeLessThanOrEqual(CLUSTER_MAX_ZOOM);
-    expect(PRICE_MIN_ZOOM).toBeGreaterThanOrEqual(LOGO_MIN_ZOOM);
+  it("loads brand data no later than the clustering threshold", () => {
+    // Brand data (OpenStreetMap enrichment) must be available as soon as
+    // bubbles appear, otherwise markers are rendered without their logo.
+    expect(BRAND_FETCH_MIN_ZOOM).toBeLessThanOrEqual(CLUSTER_MAX_ZOOM);
+    expect(PRICE_MIN_ZOOM).toBeGreaterThanOrEqual(CLUSTER_MAX_ZOOM);
   });
 });
 
