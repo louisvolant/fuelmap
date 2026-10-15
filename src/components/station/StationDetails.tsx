@@ -62,29 +62,26 @@ export function StationDetails({
   const content = (
     <div className="flex flex-col gap-5">
       <header>
-        <div className="flex items-start gap-3">
-          <BrandBadge brand={station.brand} size={36} />
-          <div className="min-w-0 flex-1">
-            {station.address && (
-              <p className="text-sm font-medium">{station.address}</p>
-            )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {[station.postalCode, station.city].filter(Boolean).join(" ")}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className={badgeClasses}>
-                {station.isHighway ? t("station.highway") : t("station.route")}
-              </span>
-              {distance !== undefined && (
-                <span className={badgeClasses}>
-                  {formatDistance(distance, locale)}
-                </span>
-              )}
-            </div>
-          </div>
+        {station.address && (
+          <p className="text-sm font-medium">{station.address}</p>
+        )}
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {[station.postalCode, station.city].filter(Boolean).join(" ")}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className={badgeClasses}>
+            {station.isHighway ? t("station.highway") : t("station.route")}
+          </span>
+          {distance !== undefined && (
+            <span className={badgeClasses}>
+              {formatDistance(distance, locale)}
+            </span>
+          )}
         </div>
-        <div className="mt-3">
+        <div className="mt-3 flex items-center justify-between gap-3">
           <FavoriteToggle stationId={station.id} country={station.country} />
+          {/* Brand mark, pinned to the right of the favorite button. */}
+          <BrandBadge brand={station.brand} size={40} />
         </div>
       </header>
 

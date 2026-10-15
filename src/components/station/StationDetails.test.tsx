@@ -92,7 +92,7 @@ describe("StationDetails", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows the brand badge in the header", () => {
+  it("shows the brand badge next to the favorite button", () => {
     const branded: NormalizedStation = { ...station, brand: "Total" };
     render(
       <StationDetails
