@@ -16,7 +16,8 @@
     "e2e:ui": "playwright test --ui",
     "icons": "node scripts/generate-icons.mjs",
     "brands": "node scripts/generate-brand-logos.mjs",
-    "brands:check": "node scripts/check-brand-domains.mjs"
+    "brands:check": "node scripts/check-brand-domains.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",
@@ -51,6 +52,7 @@
     "typescript-eslint": "^8.71.2",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "wrangler": "^4.151.0"
   }
 }

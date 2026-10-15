@@ -119,10 +119,14 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 - The **cron** (`0 4 1,16 * *`) is only the compliance net — Brandfetch's terms
   grant a 30-day cache licence that must be renewed by an API call at least every
   30 days — plus a warm-up for brands nobody views.
-- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps) and
-  `/brands/report.json` (per-brand status of the last full refresh: `ok`,
-  `no_logo`, `api_404`…). Domains flagged `// verify` in `src/lib/brandfetch.ts`
-  still need a visual check (Netto FR/DE, Cora, Shell/BP).
+- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps, plus
+  `apiKeyConfigured` — a boolean stating whether the Worker can see the Brand API
+  secret) and `/brands/report.json` (per-brand status, `ok`, `no_logo`,
+  `api_401`…, recorded for both the cron and the lazy refreshes). If
+  `apiKeyConfigured` is `false`, the secret is missing or misnamed; if the report
+  shows `api_401`/`api_403`, the key itself is rejected. Domains flagged
+  `// verify` in `src/lib/brandfetch.ts` still need a visual check (Netto FR/DE,
+  Cora, Shell/BP).
 - `npm run brands:check` (with `BRANDFETCH_API_KEY` in the environment) verifies
   the whole name → domain table against the live Brand API and prints, per brand,
   the resolved name and the picked logo variant — the fastest way to fix the
@@ -288,7 +292,12 @@ Set the secrets once (they never ship to the browser):
 ```bash
 npx wrangler secret put TANKERKOENIG_API_KEY   # Germany (Tankerkönig)
 npx wrangler secret put BRANDFETCH_API_KEY     # official brand logos
+npx wrangler secret list                       # check the exact secret names
 ```
+
+Deploy with `npm run deploy` (build + `wrangler deploy`, wrangler is pinned as a
+dev dependency). After deploying, `GET /brands/manifest.json` confirms the
+Worker is live and that it can see the Brand API secret.
 
 `wrangler.toml` also declares the **R2 bucket** holding the brand-logo snapshots
 (`BRANDS_BUCKET` → `fuelmap-bucket`) and the **cron trigger** that refreshes them.
