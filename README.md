@@ -42,9 +42,10 @@ French government fuel-price open data.
 - 📋 **Sortable list** — stations ranked by price or by distance.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
   the stations along the driving route.
-- 💶 **Prices on markers** — the selected fuel's price, in a rounded capsule
-  right of the brand mark from zoom 12.5, or **inside** the bubble when the brand
-  is unknown.
+- 💶 **Prices on markers with color coding** — the selected fuel's price, in a
+  rounded capsule right of the brand mark from zoom 12.5 (or **inside** the bubble
+  when the brand is unknown), with color-coded price text and disc borders (green
+  for the cheapest tier, red for the highest tier, neutral slate for median).
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.
 - 🧭 **Navigation hand-off** — one tap to **Waze**, **Google Maps** or **Apple Maps**.

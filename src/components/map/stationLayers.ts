@@ -44,6 +44,8 @@ export interface StationFeatureProperties {
    * enrichment lands, or while that enrichment is unavailable upstream).
    */
   priceInDisc: boolean;
+  /** Relative price color: green for cheapest, red for highest, neutral slate otherwise. */
+  priceColor: string;
 }
 
 export interface StationLayersOptions {
@@ -66,6 +68,17 @@ export function stationsToFeatureCollection(
   const favorites = new Set(favoriteIds);
   const features: Feature<Point, StationFeatureProperties>[] = [];
 
+  let minPrice = Number.POSITIVE_INFINITY;
+  let maxPrice = Number.NEGATIVE_INFINITY;
+
+  for (const station of stations) {
+    const fuel = displayFuel(station, activeFuelId);
+    if (typeof fuel?.price === "number") {
+      if (fuel.price < minPrice) minPrice = fuel.price;
+      if (fuel.price > maxPrice) maxPrice = fuel.price;
+    }
+  }
+
   for (const station of stations) {
     const fuel = displayFuel(station, activeFuelId);
     const price = fuel?.price;
@@ -83,6 +96,15 @@ export function stationsToFeatureCollection(
     // A priced country with neither a price nor a brand has nothing to show.
     if (dimmed && !brandImage) continue;
 
+    const priceColor =
+      typeof price === "number" && maxPrice > minPrice
+        ? (price - minPrice) / (maxPrice - minPrice) <= 0.25
+          ? "#15803d"
+          : (price - minPrice) / (maxPrice - minPrice) >= 0.75
+            ? "#b91c1c"
+            : "#0f172a"
+        : "#0f172a";
+
     features.push({
       type: "Feature",
       id: station.id,
@@ -95,6 +117,7 @@ export function stationsToFeatureCollection(
         brandImage,
         dimmed,
         priceInDisc,
+        priceColor,
       },
     });
   }

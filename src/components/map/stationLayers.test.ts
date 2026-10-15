@@ -116,4 +116,23 @@ describe("stationsToFeatureCollection", () => {
     const kept = stationsToFeatureCollection([brandedNoPrice], null);
     expect(kept.features[0].properties?.priceInDisc).toBe(false);
   });
+
+  it("assigns relative price colors (green for cheapest, red for highest)", () => {
+    const cheapStation: NormalizedStation = {
+      ...station,
+      id: "FR:cheap",
+      fuels: [{ fuelId: "gazole", price: 1.6, currency: "EUR", available: true }],
+    };
+    const expensiveStation: NormalizedStation = {
+      ...station,
+      id: "FR:expensive",
+      fuels: [{ fuelId: "gazole", price: 2.0, currency: "EUR", available: true }],
+    };
+    const collection = stationsToFeatureCollection(
+      [cheapStation, expensiveStation],
+      "gazole",
+    );
+    expect(collection.features[0].properties?.priceColor).toBe("#15803d");
+    expect(collection.features[1].properties?.priceColor).toBe("#b91c1c");
+  });
 });

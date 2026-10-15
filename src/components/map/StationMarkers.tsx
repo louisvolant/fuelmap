@@ -172,7 +172,12 @@ export function StationMarkers({
                 "case",
                 ["get", "favorite"],
                 "#b45309",
-                ["case", ["get", "dimmed"], "#cbd5e1", "#0f172a"],
+                [
+                  "case",
+                  ["get", "dimmed"],
+                  "#cbd5e1",
+                  ["case", ["get", "priceInDisc"], ["get", "priceColor"], "#0f172a"],
+                ],
               ],
             },
           });
@@ -206,7 +211,7 @@ export function StationMarkers({
               "text-offset": [1.5, 0],
               "text-allow-overlap": true,
             },
-            paint: { "text-color": "#0f172a" },
+            paint: { "text-color": ["get", "priceColor"] },
           });
         }
 
@@ -230,7 +235,7 @@ export function StationMarkers({
               "text-anchor": "center",
               "text-allow-overlap": true,
             },
-            paint: { "text-color": "#0f172a" },
+            paint: { "text-color": ["get", "priceColor"] },
           });
         }
 
