@@ -120,12 +120,47 @@ async function refreshAllBrands(env: Env): Promise<BrandRefreshResult[]> {
     {
       httpMetadata: {
         contentType: "application/json; charset=utf-8",
-        cacheControl: "public, max-age=3600",
+        cacheControl: "public, max-age=60",
       },
     },
   );
 
   return results;
+}
+
+/**
+ * Merge refresh outcomes into the diagnostic report, so a lazily triggered
+ * refresh (the normal path) is observable through `/brands/report.json` too.
+ * Diagnostics only: failures are ignored.
+ */
+async function recordRefresh(
+  env: Env,
+  results: BrandRefreshResult[],
+): Promise<void> {
+  if (results.length === 0) return;
+  try {
+    const existing = await env.BRANDS_BUCKET.get(BRAND_LOGO_REPORT);
+    const report = existing
+      ? await existing.json<{ brands?: BrandRefreshResult[] }>()
+      : {};
+    const byId = new Map(
+      (report.brands ?? []).map((brand) => [brand.id, brand]),
+    );
+    for (const result of results) byId.set(result.id, result);
+
+    await env.BRANDS_BUCKET.put(
+      BRAND_LOGO_REPORT,
+      JSON.stringify({ at: Date.now(), brands: [...byId.values()] }),
+      {
+        httpMetadata: {
+          contentType: "application/json; charset=utf-8",
+          cacheControl: "public, max-age=60",
+        },
+      },
+    );
+  } catch {
+    // Diagnostics only.
+  }
 }
 
 /** Age (ms) of a snapshot, or `Infinity` when unknown. */
@@ -163,7 +198,13 @@ async function handleBrandAsset(
         status: "ok",
         refreshedAt: Number(object.customMetadata?.refreshedAt ?? 0) || null,
       }));
-    return json({ at: Date.now(), brands });
+    return json({
+      at: Date.now(),
+      // Never expose the key itself, only whether the Worker can see it.
+      apiKeyConfigured: Boolean(env.BRANDFETCH_API_KEY),
+      apiBaseUrl: env.BRANDFETCH_API_URL ?? "https://api.brandfetch.io/v2/brands",
+      brands,
+    });
   }
 
   if (name === "report.json") {
@@ -185,7 +226,9 @@ async function handleBrandAsset(
   if (!object) {
     // Nothing cached yet: refresh in the background, answer 404 so the client
     // shows the bundled mark instead of waiting.
-    ctx.waitUntil(refreshBrand(env, name));
+    ctx.waitUntil(
+      refreshBrand(env, name).then((result) => recordRefresh(env, [result])),
+    );
     return new Response(null, {
       status: 404,
       headers: { "cache-control": "public, max-age=300" },
@@ -193,7 +236,9 @@ async function handleBrandAsset(
   }
 
   if (snapshotAge(object) > BRAND_LOGO_MAX_AGE_MS) {
-    ctx.waitUntil(refreshBrand(env, name));
+    ctx.waitUntil(
+      refreshBrand(env, name).then((result) => recordRefresh(env, [result])),
+    );
   }
 
   return new Response(object.body, {
@@ -217,6 +262,7 @@ interface R2ObjectBodyLike {
   body: ReadableStream;
   httpMetadata?: { contentType?: string };
   customMetadata?: Record<string, string>;
+  json<T = unknown>(): Promise<T>;
 }
 
 interface R2BucketLike {
