@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 
-const OSM_STATIONS_PATTERN = /\/api\/osm\/stations/;
+// Version-agnostic on purpose: the endpoint path is versioned (`/api/osm/v3/...`)
+// so a stale CDN cache can be bypassed, and the mock must not need updating then.
+const OSM_STATIONS_PATTERN = /\/api\/osm\/(v\d+\/)?stations/;
 
 export interface OsmStationFixture {
   key?: string;

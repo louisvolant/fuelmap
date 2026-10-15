@@ -15,6 +15,11 @@
  */
 import { parseItalianStations } from "../src/lib/italyFuel";
 import {
+  isTrustworthyOverpassAnswer,
+  type OverpassElement,
+  type OverpassPayload,
+} from "../src/lib/osmStations";
+import {
   parseBelgianMaxPrices,
   parseLuxembourgMaxPrices,
 } from "../src/lib/maxPrices";
@@ -388,8 +393,6 @@ const OSM_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
-  "https://overpass.osm.ch/api/interpreter",
-  "https://overpass.openstreetmap.ru/api/interpreter",
 ];
 const OSM_CACHE_TTL = 7 * 24 * 60 * 60;
 /**
@@ -397,7 +400,7 @@ const OSM_CACHE_TTL = 7 * 24 * 60 * 60;
  * version (in particular empty results cached before failures were detected)
  * are ignored instead of being served for a week.
  */
-const OSM_CACHE_VERSION = 2;
+const OSM_CACHE_VERSION = 3;
 /**
  * Public path of the endpoint. **Versioned on purpose**: responses of the older
  * path are stuck in Cloudflare's edge cache (it ignores query strings, so a
@@ -405,15 +408,6 @@ const OSM_CACHE_VERSION = 2;
  * brand in the area for a week. A new path starts from a clean slate.
  */
 const OSM_STATIONS_PATH = `/api/osm/v${OSM_CACHE_VERSION}/stations`;
-
-interface OverpassElement {
-  type: string;
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
-}
 
 /**
  * Run an Overpass query against the mirrors until one answers.
@@ -437,16 +431,10 @@ async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
         body: new URLSearchParams({ data: query }).toString(),
       });
       if (!response.ok) continue;
-      const payload = (await response.json()) as {
-        elements?: OverpassElement[];
-        remark?: string;
-      };
-      // A 200 can still be a failure: Overpass reports timeouts and rate limits
-      // in `remark`, with an empty `elements` array.
-      if (Array.isArray(payload.elements) && !payload.remark) {
-        return payload.elements;
-      }
-    } catch {
+      const payload = (await response.json()) as OverpassPayload;
+      if (isTrustworthyOverpassAnswer(payload)) {
+        return payload.elements ?? [];
+      }    } catch {
       // Try the next mirror.
     }
   }

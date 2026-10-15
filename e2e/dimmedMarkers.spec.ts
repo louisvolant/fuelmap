@@ -68,7 +68,10 @@ test("dims stations with no price and hides those with nothing to show", async (
 }) => {
   const osmRequests: string[] = [];
   page.on("request", (request) => {
-    if (request.url().includes("/api/osm/stations")) osmRequests.push(request.url());
+    // Version-agnostic: the endpoint path carries the cache version.
+    if (/\/api\/osm\/(v\d+\/)?stations/.test(request.url())) {
+      osmRequests.push(request.url());
+    }
   });
 
   await mockFuelApi(page, STATIONS);
