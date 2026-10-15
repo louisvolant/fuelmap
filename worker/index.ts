@@ -20,8 +20,11 @@ import {
 } from "../src/lib/maxPrices";
 import {
   BRANDFETCH_DOMAINS,
+  assetHostPath,
+  credentialedAssetUrl,
   logoContentType,
-  pickBrandfetchLogo,
+  pickBrandfetchLogos,
+  sniffImageFormat,
   type BrandfetchBrand,
 } from "../src/lib/brandfetch";
 
@@ -54,6 +57,8 @@ interface BrandRefreshResult {
   domain?: string;
   format?: string;
   type?: string;
+  /** `host/path` of the asset that was fetched (never the signed query). */
+  asset?: string;
 }
 
 /** Snapshot one brand from Brandfetch into R2. Returns the outcome status. */
@@ -62,12 +67,13 @@ async function refreshBrand(env: Env, id: string): Promise<BrandRefreshResult> {
   if (!domain) return { id, status: "unknown" };
 
   const base = env.BRANDFETCH_API_URL ?? "https://api.brandfetch.io/v2/brands";
+  const apiKey = env.BRANDFETCH_API_KEY;
   const result: BrandRefreshResult = { id, domain };
 
   try {
     const response = await fetch(`${base}/${encodeURIComponent(domain)}`, {
       headers: {
-        authorization: `Bearer ${env.BRANDFETCH_API_KEY ?? ""}`,
+        authorization: `Bearer ${apiKey ?? ""}`,
         accept: "application/json",
       },
     });
@@ -78,30 +84,58 @@ async function refreshBrand(env: Env, id: string): Promise<BrandRefreshResult> {
     const brand = (await response.json()) as BrandfetchBrand;
     result.name = brand.name;
 
-    const logo = pickBrandfetchLogo(brand);
-    if (!logo) return { ...result, status: "no_logo" };
+    // Assets served by the Logo CDN cannot always be downloaded (it redirects to
+    // its documentation), so walk the candidates until one returns real bytes.
+    const candidates = pickBrandfetchLogos(brand).slice(0, 8);
+    if (candidates.length === 0) return { ...result, status: "no_logo" };
 
-    const asset = await fetch(logo.src);
-    if (!asset.ok) return { ...result, status: `asset_${asset.status}` };
+    let failure = "no_logo";
+    let lastAsset = "";
+    for (const candidate of candidates) {
+      const assetUrl = credentialedAssetUrl(candidate.src, apiKey);
+      lastAsset = assetHostPath(assetUrl);
+      const asset = await fetch(assetUrl, {
+        headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+      });
+      if (!asset.ok) {
+        failure = `asset_${asset.status}`;
+        continue;
+      }
 
-    await env.BRANDS_BUCKET.put(
-      `${BRAND_LOGO_PREFIX}${id}`,
-      await asset.arrayBuffer(),
-      {
+      const bytes = new Uint8Array(await asset.arrayBuffer());
+      const format = sniffImageFormat(bytes);
+      if (!format) {
+        // Typically the CDN's HTML documentation page.
+        failure = "asset_not_image";
+        continue;
+      }
+
+      await env.BRANDS_BUCKET.put(`${BRAND_LOGO_PREFIX}${id}`, bytes, {
         httpMetadata: {
-          contentType: logoContentType(logo.format),
+          contentType: logoContentType(format),
           cacheControl: "public, max-age=86400, stale-while-revalidate=2592000",
         },
-        customMetadata: { refreshedAt: String(Date.now()), source: domain },
-      },
-    );
+        customMetadata: {
+          refreshedAt: String(Date.now()),
+          source: domain,
+          // Host and path only: the query string may carry a signed token.
+          asset: lastAsset,
+          // Marks a snapshot whose bytes have been validated as an image. Older
+          // snapshots lack it and are refetched once (see `handleBrandAsset`).
+          verified: "1",
+        },
+      });
 
-    return {
-      ...result,
-      status: "ok",
-      format: logo.format,
-      type: logo.type,
-    };
+      return {
+        ...result,
+        status: "ok",
+        format,
+        type: candidate.type,
+        asset: lastAsset,
+      };
+    }
+
+    return { ...result, status: failure, asset: lastAsset };
   } catch {
     return { ...result, status: "error" };
   }
@@ -193,11 +227,19 @@ async function handleBrandAsset(
     const list = await env.BRANDS_BUCKET.list({ prefix: BRAND_LOGO_PREFIX });
     const brands = list.objects
       .filter((object) => object.key !== BRAND_LOGO_MANIFEST && object.key !== BRAND_LOGO_REPORT)
-      .map((object) => ({
-        id: object.key.slice(BRAND_LOGO_PREFIX.length),
-        status: "ok",
-        refreshedAt: Number(object.customMetadata?.refreshedAt ?? 0) || null,
-      }));
+      .map((object) => {
+        const verified = object.customMetadata?.verified === "1";
+        return {
+          id: object.key.slice(BRAND_LOGO_PREFIX.length),
+          // `unverified` snapshots were written before the bytes were validated:
+          // they are refetched on the next request (a poisoned HTML page cannot
+          // be displayed, so it must not look healthy here).
+          status: verified ? "ok" : "unverified",
+          contentType: object.httpMetadata?.contentType ?? null,
+          refreshedAt: Number(object.customMetadata?.refreshedAt ?? 0) || null,
+          asset: object.customMetadata?.asset ?? null,
+        };
+      });
     return json({
       at: Date.now(),
       // Never expose the key itself, only whether the Worker can see it.
@@ -222,16 +264,22 @@ async function handleBrandAsset(
     return json({ message: "unknown brand" }, 404);
   }
 
-  const object = await env.BRANDS_BUCKET.get(`${BRAND_LOGO_PREFIX}${name}`);
-  if (!object) {
-    // Nothing cached yet: refresh in the background, answer 404 so the client
-    // shows the bundled mark instead of waiting.
+  const key = `${BRAND_LOGO_PREFIX}${name}`;
+  const object = await env.BRANDS_BUCKET.get(key);
+  // Snapshots written before the bytes were validated are refetched once: a
+  // cached HTML page can never be displayed and must not be served forever.
+  const usable = object?.customMetadata?.verified === "1";
+
+  if (!usable) {
+    if (object) ctx.waitUntil(env.BRANDS_BUCKET.delete(key));
+    // Nothing usable: refresh in the background, answer 404 so the client shows
+    // the bundled mark instead of waiting.
     ctx.waitUntil(
       refreshBrand(env, name).then((result) => recordRefresh(env, [result])),
     );
     return new Response(null, {
       status: 404,
-      headers: { "cache-control": "public, max-age=300" },
+      headers: { "cache-control": "public, max-age=60" },
     });
   }
 
@@ -269,15 +317,20 @@ interface R2BucketLike {
   get(key: string): Promise<R2ObjectBodyLike | null>;
   put(
     key: string,
-    value: ArrayBuffer | string,
+    value: ArrayBuffer | Uint8Array | string,
     options?: {
       httpMetadata?: { contentType?: string; cacheControl?: string };
       customMetadata?: Record<string, string>;
     },
   ): Promise<unknown>;
-  list(options?: {
-    prefix?: string;
-  }): Promise<{ objects: { key: string; customMetadata?: Record<string, string> }[] }>;
+  delete(key: string): Promise<unknown>;
+  list(options?: { prefix?: string }): Promise<{
+    objects: {
+      key: string;
+      httpMetadata?: { contentType?: string };
+      customMetadata?: Record<string, string>;
+    }[];
+  }>;
 }
 
 export interface Env {

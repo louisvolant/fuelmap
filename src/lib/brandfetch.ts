@@ -75,8 +75,21 @@ function rank(list: string[], value: string | undefined): number {
 export function pickBrandfetchLogo(
   brand: BrandfetchBrand,
 ): PickedLogo | undefined {
+  return pickBrandfetchLogos(brand)[0];
+}
+
+/**
+ * All usable logo candidates, best first.
+ *
+ * The Brand API can return several assets per brand and **not every asset URL
+ * serves its bytes to a programmatic client**: `cdn.brandfetch.io` (Logo API)
+ * only serves baked, signed links and otherwise redirects to the documentation.
+ * The Worker therefore walks the candidates in order until one returns real
+ * image bytes (see `refreshBrand` in `worker/index.ts`).
+ */
+export function pickBrandfetchLogos(brand: BrandfetchBrand): PickedLogo[] {
   const logos = brand.logos ?? [];
-  if (logos.length === 0) return undefined;
+  if (logos.length === 0) return [];
 
   const ordered = [...logos].sort((a, b) => {
     const byType = rank(TYPE_ORDER, a.type) - rank(TYPE_ORDER, b.type);
@@ -87,6 +100,7 @@ export function pickBrandfetchLogo(
     return themeRank(a) - themeRank(b);
   });
 
+  const picked: PickedLogo[] = [];
   for (const logo of ordered) {
     const formats = [...(logo.formats ?? [])].sort(
       (a, b) => rank(FORMAT_ORDER, a.format) - rank(FORMAT_ORDER, b.format),
@@ -99,18 +113,23 @@ export function pickBrandfetchLogo(
         format.height !== undefined &&
         Math.abs(format.width - format.height) <= 4,
     );
-    const chosen = square ?? formats[0];
-    if (chosen.src) {
-      return {
-        src: chosen.src,
-        format: chosen.format,
-        type: logo.type,
-        theme: logo.theme,
-      };
+    // The square-ish format first, then the remaining ones as fallbacks.
+    const candidates = square
+      ? [square, ...formats.filter((format) => format !== square)]
+      : formats;
+    for (const chosen of candidates) {
+      if (chosen.src) {
+        picked.push({
+          src: chosen.src,
+          format: chosen.format,
+          type: logo.type,
+          theme: logo.theme,
+        });
+      }
     }
   }
 
-  return undefined;
+  return picked;
 }
 
 /** Content type to serve a cached logo with. */
@@ -118,4 +137,75 @@ export function logoContentType(format: string): string {
   if (format === "svg") return "image/svg+xml";
   if (format === "jpg" || format === "jpeg") return "image/jpeg";
   return `image/${format}`;
+}
+
+/** Image type detected from the bytes themselves, whatever the headers claim. */
+export type ImageFormat = "svg" | "png" | "jpeg" | "webp" | "gif";
+
+/**
+ * Identify an image from its magic bytes.
+ *
+ * Brandfetch's CDN answers with a 200 **HTML page** (its documentation) for URLs
+ * it refuses to serve, and a happy `fetch()` cannot tell the difference from a
+ * logo: the bytes have to be checked before they are cached.
+ */
+export function sniffImageFormat(bytes: Uint8Array): ImageFormat | undefined {
+  const starts = (...signature: number[]) =>
+    signature.every((byte, index) => bytes[index] === byte);
+
+  if (bytes.length >= 8 && starts(0x89, 0x50, 0x4e, 0x47)) return "png";
+  if (bytes.length >= 3 && starts(0xff, 0xd8, 0xff)) return "jpeg";
+  if (bytes.length >= 6 && starts(0x47, 0x49, 0x46, 0x38)) return "gif";
+  if (
+    bytes.length >= 12 &&
+    starts(0x52, 0x49, 0x46, 0x46) && // "RIFF"
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50 // "WEBP"
+  ) {
+    return "webp";
+  }
+  // SVG is textual. Require it to *start* with the root element (or an XML
+  // prolog), so an HTML page that merely embeds an <svg> is not mistaken for
+  // one — Brandfetch serves exactly such a page for links it refuses to serve.
+  const head = new TextDecoder()
+    .decode(bytes.slice(0, 1024))
+    .replace(/^\uFEFF/, "")
+    .trimStart();
+  if (/^<svg[\s>]/i.test(head)) return "svg";
+  if (/^<\?xml[\s\S]*?<svg[\s>]/i.test(head)) return "svg";
+
+  return undefined;
+}
+
+/**
+ * The Brandfetch CDN only serves its bytes when the client id travels in the `c`
+ * query parameter; without it, it redirects to its documentation. Adding it when
+ * missing costs nothing and rescues links that arrive unsigned.
+ */
+export function credentialedAssetUrl(
+  src: string,
+  clientId: string | undefined,
+): string {
+  if (!clientId) return src;
+  try {
+    const url = new URL(src);
+    if (url.hostname.endsWith("brandfetch.io") && !url.searchParams.has("c")) {
+      url.searchParams.set("c", clientId);
+    }
+    return url.toString();
+  } catch {
+    return src;
+  }
+}
+
+/** `host/path` of a URL, without its query string (which may carry a token). */
+export function assetHostPath(src: string): string {
+  try {
+    const url = new URL(src);
+    return `${url.hostname}${url.pathname}`;
+  } catch {
+    return "";
+  }
 }

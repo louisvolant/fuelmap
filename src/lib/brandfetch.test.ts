@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   BRANDFETCH_DOMAINS,
+  assetHostPath,
+  credentialedAssetUrl,
   logoContentType,
   pickBrandfetchLogo,
+  pickBrandfetchLogos,
+  sniffImageFormat,
   type BrandfetchBrand,
 } from "@/lib/brandfetch";
 import { BRANDS } from "@/lib/brands";
@@ -73,5 +77,74 @@ describe("logoContentType", () => {
     expect(logoContentType("svg")).toBe("image/svg+xml");
     expect(logoContentType("png")).toBe("image/png");
     expect(logoContentType("jpg")).toBe("image/jpeg");
+  });
+});
+
+describe("pickBrandfetchLogos", () => {
+  it("lists every candidate, best first, so a fetchable one can be tried", () => {
+    const brand: BrandfetchBrand = {
+      logos: [
+        {
+          type: "icon",
+          theme: "light",
+          formats: [
+            { src: "cdn/icon.svg", format: "svg" },
+            { src: "asset/icon.png", format: "png" },
+          ],
+        },
+      ],
+    };
+
+    // The size-less SVG has no dimensions, so the preference falls back to the
+    // format order: svg first, then the other formats of the same logo.
+    expect(pickBrandfetchLogos(brand).map((logo) => logo.src)).toEqual([
+      "cdn/icon.svg",
+      "asset/icon.png",
+    ]);
+    expect(pickBrandfetchLogo(brand)?.src).toBe("cdn/icon.svg");
+  });
+});
+
+describe("sniffImageFormat", () => {
+  const encode = (text: string) => new TextEncoder().encode(text);
+
+  it("detects the real image type", () => {
+    expect(sniffImageFormat(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]))).toBe("png");
+    expect(sniffImageFormat(new Uint8Array([0xff, 0xd8, 0xff, 1, 2]))).toBe("jpeg");
+    expect(sniffImageFormat(encode("\n  <svg xmlns='...'>"))).toBe("svg");
+  });
+
+  it("rejects anything else, in particular the CDN's HTML page", () => {
+    expect(sniffImageFormat(encode("<!DOCTYPE html><html lang=\"en\">"))).toBeUndefined();
+    expect(sniffImageFormat(new Uint8Array())).toBeUndefined();
+  });
+});
+
+describe("credentialedAssetUrl", () => {
+  it("adds the client parameter the CDN requires when it is missing", () => {
+    expect(
+      credentialedAssetUrl("https://cdn.brandfetch.io/domain/x.com/icon", "abc"),
+    ).toBe("https://cdn.brandfetch.io/domain/x.com/icon?c=abc");
+  });
+
+  it("leaves an already signed URL and foreign hosts untouched", () => {
+    expect(
+      credentialedAssetUrl("https://cdn.brandfetch.io/domain/x.com?c=zzz", "abc"),
+    ).toBe("https://cdn.brandfetch.io/domain/x.com?c=zzz");
+    expect(credentialedAssetUrl("https://example.com/logo.svg", "abc")).toBe(
+      "https://example.com/logo.svg",
+    );
+    expect(credentialedAssetUrl("https://cdn.brandfetch.io/x", undefined)).toBe(
+      "https://cdn.brandfetch.io/x",
+    );
+  });
+});
+
+describe("assetHostPath", () => {
+  it("drops the query string, which may carry a signed token", () => {
+    expect(
+      assetHostPath("https://asset.brandfetch.io/idA/idB.svg?token=secret"),
+    ).toBe("asset.brandfetch.io/idA/idB.svg");
+    expect(assetHostPath("not a url")).toBe("");
   });
 });

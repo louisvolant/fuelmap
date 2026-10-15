@@ -109,6 +109,13 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 
 - `src/lib/brandfetch.ts` holds the reviewable **name → domain** table and the
   asset-picking rules (icon → light theme → SVG, square-ish preferred).
+- **A `200` is not proof of an image.** Brandfetch's Logo CDN answers `200` with
+  its **HTML documentation page** for links it refuses to serve (this poisoned
+  the cache once: HTML snapshots served as `image/jpeg`, undisplayable, so the
+  app fell back to the bundled marks forever). Every downloaded asset is now
+  validated on its **magic bytes** before being cached, each candidate URL is
+  tried until one yields real image bytes, and snapshots written before that
+  validation are refetched once (`verified` in the R2 metadata).
 - `GET /brands/<id>` is a **self-healing cache**:
   1. fresh snapshot (< 29 days) → served straight from R2, no upstream call;
   2. stale snapshot → served immediately, refreshed in the background;
@@ -119,10 +126,11 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 - The **cron** (`0 4 1,16 * *`) is only the compliance net — Brandfetch's terms
   grant a 30-day cache licence that must be renewed by an API call at least every
   30 days — plus a warm-up for brands nobody views.
-- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps, plus
-  `apiKeyConfigured` — a boolean stating whether the Worker can see the Brand API
-  secret) and `/brands/report.json` (per-brand status, `ok`, `no_logo`,
-  `api_401`…, recorded for both the cron and the lazy refreshes). If
+- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps, the
+  content type, the asset that was fetched, and `apiKeyConfigured` — a boolean
+  stating whether the Worker can see the Brand API secret) and
+  `/brands/report.json` (per-brand status, `ok`, `no_logo`, `api_401`,
+  `asset_not_image`…, recorded for both the cron and the lazy refreshes). If
   `apiKeyConfigured` is `false`, the secret is missing or misnamed; if the report
   shows `api_401`/`api_403`, the key itself is rejected. Domains flagged
   `// verify` in `src/lib/brandfetch.ts` still need a visual check (Netto FR/DE,
