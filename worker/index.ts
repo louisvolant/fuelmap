@@ -388,8 +388,16 @@ const OSM_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.openstreetmap.ru/api/interpreter",
 ];
 const OSM_CACHE_TTL = 7 * 24 * 60 * 60;
+/**
+ * Bump when the cached payload shape changes, so entries written by an older
+ * version (in particular empty results cached before failures were detected)
+ * are ignored instead of being served for a week.
+ */
+const OSM_CACHE_VERSION = 2;
 
 interface OverpassElement {
   type: string;
@@ -400,8 +408,14 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-/** Run an Overpass query against the mirrors until one answers. */
-async function queryOverpass(query: string): Promise<OverpassElement[]> {
+/**
+ * Run an Overpass query against the mirrors until one answers.
+ *
+ * Returns `null` when **every** mirror failed, which is deliberately different
+ * from `[]` (a box that genuinely holds no fuel station): a transient upstream
+ * failure must never be cached as an empty result.
+ */
+async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
   for (const mirror of OSM_MIRRORS) {
     try {
       const response = await fetch(mirror, {
@@ -422,7 +436,7 @@ async function queryOverpass(query: string): Promise<OverpassElement[]> {
       // Try the next mirror.
     }
   }
-  return [];
+  return null;
 }
 
 /**
@@ -444,7 +458,7 @@ async function handleOsmStations(
   }
 
   const cacheKey = new Request(
-    `https://fuelmap.internal/api/osm/stations?w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
+    `https://fuelmap.internal/api/osm/stations?v=${OSM_CACHE_VERSION}&w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
     { method: "GET" },
   );
   const cached = await caches.default.match(cacheKey);
@@ -452,6 +466,12 @@ async function handleOsmStations(
 
   const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
   const elements = await queryOverpass(query);
+
+  // Upstream failure: answer a retryable error and cache **nothing**, otherwise a
+  // bad minute at Overpass hides every brand in the area for a week.
+  if (elements === null) {
+    return json({ message: "OpenStreetMap is unavailable" }, 502);
+  }
 
   const stations = elements.flatMap((element) => {
     const lat = element.lat ?? element.center?.lat;

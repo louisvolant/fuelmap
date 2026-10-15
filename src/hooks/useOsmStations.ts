@@ -6,6 +6,12 @@ import { fetchOsmStations, type OsmFuelStation } from "@/lib/osmStations";
 import { useOsmStationsStore } from "@/stores/osmStationsStore";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * Version of the IndexedDB cache key. Bumped because an older client could store
+ * an empty result (the Worker used to cache upstream failures as "no station"),
+ * which then hid every brand for a week.
+ */
+const OSM_CACHE_VERSION = "v2";
 
 interface CachedOsmStations {
   at: number;
@@ -38,7 +44,7 @@ export function useOsmStations(
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!bounds) return [];
-      const metaKey = `osmStations:${key}`;
+      const metaKey = `osmStations:${OSM_CACHE_VERSION}:${key}`;
       const cached = await getMeta<CachedOsmStations>(metaKey);
       if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.stations;
 
