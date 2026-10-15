@@ -186,17 +186,24 @@ export function useCountryStations(
     return enrichStationsWithBrands(cachedStations, osm.data);
   }, [needsEnrichment, cachedStations, osm.data]);
 
-  // Persist newly enriched brands so the next visit skips the OSM wait.
+  // Persist newly enriched brands so the next visit skips the OSM wait. The
+  // in-memory overlay syncs after the IndexedDB write (async fetch pattern).
   useEffect(() => {
     if (!needsEnrichment || stations.length === 0) return;
     const fresh = collectNewResolutions(cachedStations, stations);
     if (fresh.length === 0) return;
-    setResolutions((previous) => {
-      const next = new Map(previous);
-      for (const resolution of fresh) next.set(resolution.stationId, resolution);
-      return next;
-    });
-    void saveBrandResolutions(fresh).catch(() => {});
+    void (async () => {
+      try {
+        await saveBrandResolutions(fresh);
+      } catch {
+        // Overlay is best-effort.
+      }
+      setResolutions((previous) => {
+        const next = new Map(previous);
+        for (const resolution of fresh) next.set(resolution.stationId, resolution);
+        return next;
+      });
+    })();
   }, [needsEnrichment, cachedStations, stations]);
 
   if (source?.kind === "area") {
