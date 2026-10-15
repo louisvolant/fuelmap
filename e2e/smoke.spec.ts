@@ -17,6 +17,24 @@ test("loads and counts stations from the fuel API", async ({ page }) => {
   await expect(page.getByText(/Stations\s*:\s*4/)).toBeVisible();
 });
 
+test("shows the zoom level", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("map-canvas")).toBeVisible();
+  await page.waitForFunction(() =>
+    Boolean((window as unknown as { __fuelmapMap?: unknown }).__fuelmapMap),
+  );
+
+  await page.evaluate(() => {
+    (
+      window as unknown as {
+        __fuelmapMap: { jumpTo: (options: unknown) => void };
+      }
+    ).__fuelmapMap.jumpTo({ center: [2.3522, 48.8566], zoom: 13.5 });
+  });
+
+  await expect(page.getByRole("status")).toHaveText("13.5");
+});
+
 test("the locate button sits above the MapLibre controls", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("map-canvas")).toBeVisible();

@@ -101,7 +101,8 @@
     "styleLiberty": "Liberty",
     "styleBright": "Bright",
     "stylePositron": "Positron",
-    "styleDark": "Escuro"
+    "styleDark": "Escuro",
+    "zoomLevel": "Nível de zoom"
   },
   "fuels": {
     "gazole": "Gasóleo",

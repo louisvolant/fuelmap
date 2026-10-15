@@ -9,6 +9,7 @@ import { ListButton } from "@/components/list/ListButton";
 import { StationListSheet } from "@/components/list/StationListSheet";
 import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import { ZoomLevelBadge } from "@/components/map/ZoomLevelBadge";
 import { MapContext } from "@/components/map/MapContext";
 import { MapStyleSwitcher } from "@/components/map/MapStyleSwitcher";
 import { StationMarkers } from "@/components/map/StationMarkers";
@@ -261,6 +262,7 @@ export default function App() {
         {/* Own map controls, stacked above MapLibre's zoom control and attribution. */}
         <div className="pointer-events-none absolute right-3 bottom-30 z-20 flex flex-col items-center gap-2">
           <LocateButton />
+          <ZoomLevelBadge />
         </div>
 
         <FilterSheet
