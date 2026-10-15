@@ -11,12 +11,18 @@ const POINT_LAYER = "station-points";
 const BRAND_LAYER = "station-brands";
 const LABEL_LAYER = "station-price-labels";
 
-/** Zoom from which individual markers (and their brand marks) are shown. */
-export const LOGO_MIN_ZOOM = 12.5;
-/** Zoom from which the price is shown next to the brand mark. */
-export const PRICE_MIN_ZOOM = 13.5;
 /** Zoom up to which stations are clustered. */
 export const CLUSTER_MAX_ZOOM = 12;
+/**
+ * Zoom from which individual markers (and their brand marks) are shown.
+ *
+ * Derived from the clustering threshold on purpose: stations are unclustered as
+ * soon as the zoom goes past `CLUSTER_MAX_ZOOM`, so this guarantees there is
+ * never a bubble on screen without its brand mark.
+ */
+export const LOGO_MIN_ZOOM = CLUSTER_MAX_ZOOM;
+/** Zoom from which the price is shown next to the brand mark. */
+export const PRICE_MIN_ZOOM = 13.5;
 
 export interface StationFeatureProperties {
   id: string;

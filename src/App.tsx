@@ -258,7 +258,8 @@ export default function App() {
           <MaxPriceBanner />
         </div>
 
-        <div className="pointer-events-none absolute right-3 bottom-3 z-20 flex flex-col items-center gap-2">
+        {/* Own map controls, stacked above MapLibre's zoom control and attribution. */}
+        <div className="pointer-events-none absolute right-3 bottom-30 z-20 flex flex-col items-center gap-2">
           <LocateButton />
         </div>
 

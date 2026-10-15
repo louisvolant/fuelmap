@@ -3,14 +3,19 @@ import { test } from "./support/fixtures";
 import { mockFuelApi } from "./support/mockFuelApi";
 import { mockOsmStations } from "./support/mockOsmStations";
 
+interface TestFeatureProperties {
+  id?: string;
+  brandImage?: string;
+}
+
 type TestMap = {
   jumpTo: (options: unknown) => void;
   getLayer: (id: string) => unknown;
   getSource: (id: string) => {
-    serialize: () => { data: { features: { properties?: { id?: string } }[] } };
+    serialize: () => { data: { features: { properties?: TestFeatureProperties }[] } };
   };
   queryRenderedFeatures: (options: unknown) => {
-    properties?: { id?: string };
+    properties?: TestFeatureProperties;
   }[];
 };
 
@@ -31,6 +36,33 @@ async function waitForLayer(page: Page, layer: string): Promise<void> {
   );
 }
 
+/** How many features each station layer currently renders. */
+async function renderedCounts(page: Page) {
+  return page.evaluate(() => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    const count = (layer: string) => {
+      try {
+        return map.queryRenderedFeatures({ layers: [layer] }).length;
+      } catch {
+        return 0;
+      }
+    };
+    return {
+      points: count("station-points"),
+      brands: count("station-brands"),
+      clusters: count("station-clusters"),
+    };
+  });
+}
+
+/** Branded OpenStreetMap stations, one per Paris fixture station. */
+const OSM_STATIONS = [
+  { lat: 48.8566, lon: 2.3522, brand: "Total" },
+  { lat: 48.8656, lon: 2.3469, brand: "Carrefour" },
+  { lat: 48.8636, lon: 2.3622, brand: "Avia" },
+  { lat: 48.8526, lon: 2.3422, brand: "Shell" },
+];
+
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockOsmStations(page);
@@ -38,6 +70,54 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() =>
     Boolean((window as unknown as { __fuelmapMap?: unknown }).__fuelmapMap),
   );
+});
+
+test("never shows an unclustered bubble without its brand mark", async ({
+  page,
+}) => {
+  // Brands come from OpenStreetMap: serve branded OSM stations to the app.
+  await mockOsmStations(page, OSM_STATIONS);
+
+  // Zoom in once so the brand enrichment runs.
+  await page.evaluate(() => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    map.jumpTo({ center: [2.3522, 48.8566], zoom: 16 });
+    map.triggerRepaint?.();
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as { __fuelmapMap: TestMap }
+        ).__fuelmapMap
+          .getSource("stations")
+          .serialize()
+          .data.features.some((feature) => feature.properties?.brandImage !== ""),
+      ),
+    )
+    .toBe(true);
+
+  // Sweep across the clustering threshold: a bubble always carries its logo.
+  for (const zoom of [16, 15, 14, 13, 12.6, 12.3, 12.1]) {
+    await page.evaluate((value) => {
+      const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+      map.jumpTo({ center: [2.3522, 48.8566], zoom: value });
+      map.triggerRepaint?.();
+    }, zoom);
+
+    await expect
+      .poll(async () => {
+        const counts = await renderedCounts(page);
+        return counts.points + counts.clusters;
+      })
+      .toBeGreaterThan(0);
+
+    const counts = await renderedCounts(page);
+    if (counts.points > 0) {
+      expect(counts.brands).toBeGreaterThan(0);
+    }
+  }
 });
 
 test("feeds one map feature per station into the source", async ({ page }) => {

@@ -64,9 +64,8 @@ body {
   }
 }
 
-/* Reserve the very bottom of the bottom-right corner for the app's own map
-   controls (locate button), so they never overlap MapLibre's zoom control and
-   attribution stack. Specificity beats maplibre-gl.css regardless of order. */
+/* The app's own bottom-right controls (locate, zoom level) are stacked *above*
+   MapLibre's zoom control and attribution, which stay at the very bottom. */
 .maplibregl-map .maplibregl-ctrl-bottom-right {
-  bottom: 3.25rem;
+  bottom: 0;
 }

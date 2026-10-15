@@ -17,9 +17,7 @@ test("loads and counts stations from the fuel API", async ({ page }) => {
   await expect(page.getByText(/Stations\s*:\s*4/)).toBeVisible();
 });
 
-test("the locate button does not overlap the MapLibre controls", async ({
-  page,
-}) => {
+test("the locate button sits above the MapLibre controls", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("map-canvas")).toBeVisible();
 
@@ -40,4 +38,6 @@ test("the locate button does not overlap the MapLibre controls", async ({
     controls!.y + controls!.height <= locate!.y
   );
   expect(overlaps).toBe(false);
+  // The locate button is *above* the zoom control and attribution.
+  expect(locate!.y + locate!.height).toBeLessThanOrEqual(controls!.y);
 });
