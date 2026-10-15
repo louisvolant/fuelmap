@@ -11,9 +11,10 @@ import { brandImageId, LOCAL_ONLY_BRANDS, type BrandId } from "./brands";
  * to the bundled mark, so it never waits for a third party and works offline.
  *
  * Whatever the source, the pixels are **normalised for a round marker** before
- * they reach MapLibre (see `styliseLogoPixels`): Brandfetch serves most brands as
- * **JPEG**, which has no alpha channel, so a transparent logo comes back baked on
- * a white or light-grey square whose corners would stick out of the bubble.
+ * they reach MapLibre (see `keyLogoBackground`, `artworkReach` and
+ * `maskLogoToCircle`): Brandfetch serves most brands as **JPEG**, which has no
+ * alpha channel, so a transparent logo comes back baked on a white or light-grey
+ * square whose corners would stick out of the bubble.
  */
 const LOGO_SIZE = 64;
 /**
@@ -178,14 +179,7 @@ export function maskLogoToCircle(pixels: PixelBuffer): void {
   }
 }
 
-/** Both steps: a logo ready to be painted on a round, white bubble. */
-export function styliseLogoPixels(pixels: PixelBuffer): void {
-  keyLogoBackground(pixels);
-  maskLogoToCircle(pixels);
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+function loadImage(src: string): Promise<HTMLImageElement> {  return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
@@ -229,7 +223,8 @@ function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData
 
   draw();
   let pixels = context.getImageData(0, 0, size, size);
-  // Measure the artwork without its (light) background, which fills the corners.
+
+  // Measure the artwork without its flat background, which fills the corners.
   keyLogoBackground(pixels);
   const reach = artworkReach(pixels);
 
@@ -239,9 +234,10 @@ function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData
     drawHeight *= shrink;
     draw();
     pixels = context.getImageData(0, 0, size, size);
+    keyLogoBackground(pixels);
   }
 
-  styliseLogoPixels(pixels);
+  maskLogoToCircle(pixels);
   return pixels;
 }
 

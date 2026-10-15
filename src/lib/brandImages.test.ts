@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { styliseLogoPixels, type PixelBuffer } from "./brandImages";
+import {
+  artworkReach,
+  keyLogoBackground,
+  maskLogoToCircle,
+  type PixelBuffer,
+} from "./brandImages";
 
 /** Build a uniform RGBA buffer. */
 function buffer(
@@ -36,14 +41,14 @@ function alphaAt(pixels: PixelBuffer, x: number, y: number): number {
 /**
  * Brandfetch serves most logos as JPEG, which has no alpha channel: a
  * transparent mark comes back baked on a light square, and drawn as is it pokes
- * out of the round bubble. These tests pin the two steps that fix it.
+ * out of the round bubble. These tests pin the three steps that fix it.
  */
-describe("styliseLogoPixels", () => {
+describe("keyLogoBackground", () => {
   it("drops a light background so only the artwork is painted", () => {
     const pixels = buffer(16, [255, 255, 255, 255]);
     setPixel(pixels, 8, 8, [217, 37, 37, 255]);
 
-    styliseLogoPixels(pixels);
+    keyLogoBackground(pixels);
 
     // White around the mark is gone, the mark itself is untouched.
     expect(alphaAt(pixels, 2, 2)).toBe(0);
@@ -56,35 +61,52 @@ describe("styliseLogoPixels", () => {
     // A pixel 30 units away from the background: neither background nor artwork.
     setPixel(pixels, 8, 8, [220, 220, 220, 255]);
 
-    styliseLogoPixels(pixels);
+    keyLogoBackground(pixels);
 
     const alpha = alphaAt(pixels, 8, 8);
     expect(alpha).toBeGreaterThan(0);
     expect(alpha).toBeLessThan(255);
   });
 
-  it("clips the corners to the inscribed circle", () => {
+  it("never keys an already transparent logo", () => {
+    // White artwork on a transparent canvas: the corners are transparent, so
+    // there is no background to remove — white must survive.
+    const pixels = buffer(16, [0, 0, 0, 0]);
+    setPixel(pixels, 8, 8, [255, 255, 255, 255]);
+
+    keyLogoBackground(pixels);
+
+    expect(alphaAt(pixels, 8, 8)).toBe(255);
+  });
+});
+
+describe("artworkReach", () => {
+  it("reports nothing to trim for a mark that stays inside the circle", () => {
+    const pixels = buffer(16, [0, 0, 0, 0]);
+    // A 4×4 dot in the middle: well inside a circle of radius 8.
+    for (let y = 6; y < 10; y += 1) {
+      for (let x = 6; x < 10; x += 1) setPixel(pixels, x, y, [0, 0, 0, 255]);
+    }
+    expect(artworkReach(pixels)).toBeLessThan(0.5);
+  });
+
+  it("reports an overflow for a full-bleed square artwork", () => {
+    // A square's corner sits at √2 × the radius: the mask would shave it.
+    expect(artworkReach(buffer(16, [0, 60, 160, 255]))).toBeGreaterThan(1.3);
+  });
+});
+
+describe("maskLogoToCircle", () => {
+  it("clips the corners but keeps the artwork on its brand background", () => {
     // A brand-coloured background is legitimate artwork and must not be keyed…
     const pixels = buffer(16, [0, 60, 160, 255]);
 
-    styliseLogoPixels(pixels);
+    maskLogoToCircle(pixels);
 
     // …but the square's corners still have to disappear.
     expect(alphaAt(pixels, 0, 0)).toBe(0);
     expect(alphaAt(pixels, 15, 15)).toBe(0);
     expect(alphaAt(pixels, 8, 8)).toBe(255);
     expect(alphaAt(pixels, 0, 8)).toBeGreaterThan(200);
-  });
-
-  it("never keys an already transparent logo", () => {
-    // White artwork on a transparent canvas: the corners are transparent, so
-    // there is no background to remove — white must survive.
-    const pixels = buffer(16, [0, 0, 0, 0]);
-    setPixel(pixels, 8, 1, [255, 255, 255, 255]);
-
-    styliseLogoPixels(pixels);
-
-    expect(alphaAt(pixels, 8, 1)).toBe(255);
-    expect(alphaAt(pixels, 0, 0)).toBe(0);
   });
 });
