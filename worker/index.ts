@@ -408,6 +408,13 @@ const OSM_CACHE_VERSION = 3;
  * brand in the area for a week. A new path starts from a clean slate.
  */
 const OSM_STATIONS_PATH = `/api/osm/v${OSM_CACHE_VERSION}/stations`;
+/**
+ * R2 key prefix holding the last trustworthy OpenStreetMap payload per bounding
+ * box. R2 (unlike the edge Cache API) is durable, so it survives a redeploy and
+ * is the only thing that can answer when every Overpass mirror is down.
+ * `brands-logo/` is a different prefix, so the brand manifest is unaffected.
+ */
+const OSM_LAST_GOOD_PREFIX = "osm-last-good/";
 
 /**
  * Run an Overpass query against the mirrors until one answers.
@@ -446,9 +453,15 @@ async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
  * Used for France (brand enrichment) and for Belgium / Luxembourg / Switzerland
  * (station positions). Cached at the edge for a week so a given area is fetched
  * from Overpass at most once per week across all users.
+ *
+ * The last trustworthy payload of each box is also kept in R2: the public
+ * Overpass mirrors are regularly saturated for hours, and without that fallback
+ * a French map loses every brand mark (`priceMode: "station"` countries then
+ * only show bubbles) for as long as the outage lasts.
  */
 async function handleOsmStations(
   url: URL,
+  env: Env,
   ctx: ExecutionContextLike,
 ): Promise<Response> {
   const west = Number(url.searchParams.get("west"));
@@ -459,10 +472,15 @@ async function handleOsmStations(
     return json({ message: "invalid bounding box" }, 400);
   }
 
+  const coarse = [west, south, east, north]
+    .map((value) => value.toFixed(2))
+    .join(",");
   const cacheKey = new Request(
-    `https://fuelmap.internal${OSM_STATIONS_PATH}?w=${west.toFixed(2)}&s=${south.toFixed(2)}&e=${east.toFixed(2)}&n=${north.toFixed(2)}`,
+    `https://fuelmap.internal${OSM_STATIONS_PATH}?bbox=${coarse}`,
     { method: "GET" },
   );
+  const lastGoodKey = `${OSM_LAST_GOOD_PREFIX}${OSM_CACHE_VERSION}/${coarse}`;
+
   const cached = await caches.default.match(cacheKey);
   // `no-store` on every answer: the Cache API entry above is the single cache,
   // and letting the edge keep its own copy is what turned one transient empty
@@ -479,10 +497,23 @@ async function handleOsmStations(
   const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
   const elements = await queryOverpass(query);
 
-  // Upstream failure: answer a retryable error and cache **nothing**, otherwise a
-  // bad minute at Overpass hides every brand in the area for a week.
+  // Upstream failure: serve the last good payload when there is one, otherwise
+  // answer a retryable error and cache **nothing**. A bad minute at Overpass must
+  // never hide every brand in the area for a week.
   if (elements === null) {
-    return json({ message: "OpenStreetMap is unavailable" }, 502);
+    const fallback = await env.BRANDS_BUCKET.get(lastGoodKey);
+    if (!fallback) {
+      return json({ message: "OpenStreetMap is unavailable" }, 502);
+    }
+    // Deliberately not written back to the Cache API: the next request must try
+    // Overpass again, so a recovered upstream is picked up immediately.
+    return new Response(fallback.body, {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "x-fuelmap-stale": "1",
+      },
+    });
   }
 
   const stations = elements.flatMap((element) => {
@@ -525,6 +556,17 @@ async function handleOsmStations(
         },
       }),
     ),
+  );
+  // Durable copy, used by the fallback above. Overwritten on every successful
+  // refresh, so it never grows stale beyond the box's last successful query.
+  ctx.waitUntil(
+    env.BRANDS_BUCKET.put(lastGoodKey, payload, {
+      httpMetadata: {
+        contentType: "application/json; charset=utf-8",
+        cacheControl: "no-store",
+      },
+      customMetadata: { at: String(Date.now()) },
+    }),
   );
 
   return new Response(payload, {
@@ -697,7 +739,7 @@ export default {
       url.pathname === "/api/osm/stations" ||
       url.pathname === OSM_STATIONS_PATH
     ) {
-      return handleOsmStations(url, ctx);
+      return handleOsmStations(url, env, ctx);
     }
 
     if (url.pathname === "/api/geo") {

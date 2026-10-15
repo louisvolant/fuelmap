@@ -26,8 +26,11 @@ French government fuel-price open data.
 - 🏷️ **Brand mark on every bubble** — from zoom 12.5 each station is a round
   white bubble with its brand mark (TotalEnergies, Esso, E.Leclerc, Carrefour,
   Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
-  Match, Cora, BP). From zoom 13.5 the bubble opens into a capsule: mark on the
-  left, the selected fuel's price in a rounded capsule right behind it.
+  Match, Cora, BP). When the brand is unknown (the French open data exposes none
+  before the OpenStreetMap enrichment lands) the bubble carries the selected
+  fuel's price instead, so a bubble is **never** drawn blank. From zoom 13.5 a
+  branded bubble opens into a capsule: mark on the left, the selected fuel's
+  price in a rounded capsule right behind it.
 - 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has
   it in shortage) stays on the map, greyed out; stations with neither a price nor
   a brand are not drawn at all.
@@ -39,7 +42,8 @@ French government fuel-price open data.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
   the stations along the driving route.
 - 💶 **Prices on markers** — the selected fuel's price, in a rounded capsule
-  right of the brand mark, from zoom 13.5.
+  right of the brand mark from zoom 13.5, or **inside** the bubble when the brand
+  is unknown.
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.
 - 🧭 **Navigation hand-off** — one tap to **Waze**, **Google Maps** or **Apple Maps**.
@@ -289,9 +293,13 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
    (Statbel CSV for Belgium, official price table for Luxembourg),
    `GET /api/osm/stations` — OpenStreetMap fuel stations via Overpass, tried
    across mirrors and cached at the edge for a week (used for the French brand
-   enrichment and for Belgian / Luxembourg / Swiss station positions), and
+   enrichment and for Belgian / Luxembourg / Swiss station positions). The last
+   trustworthy payload of each bounding box is also kept in R2 and served when
+   every mirror is down, so a saturated Overpass no longer strips the brand
+   marks; nothing is cached on a failure, and the fallback is never written back
+   to the edge cache, so a recovered upstream is picked up immediately,
    `GET /brands/<id>` + `GET /brands/manifest.json` — brand logos snapshotted
-   from the Brandfetch Brand API into R2 (see below).
+   from the Brandfetch Brand API into R2 (see below), and
    `GET /api/geo` — a coarse location derived from the client IP
    (Cloudflare `request.cf`), used when geolocation is not authorized.
 

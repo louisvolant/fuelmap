@@ -28,8 +28,12 @@ not_found_handling = "single-page-application"
 TANKERKOENIG_API_URL = "https://creativecommons.tankerkoenig.de/json/list.php"
 BRANDFETCH_API_URL = "https://api.brandfetch.io/v2/brands"
 
-# Brand logos are snapshotted from the Brandfetch Brand API into R2.
-# Brandfetch's terms allow caching for 30 days; the cron refreshes twice a month.
+# R2 cache bucket. It holds:
+#  - the brand logos snapshotted from the Brandfetch Brand API (prefix
+#    `brands-logo/`); Brandfetch's terms allow caching for 30 days and the cron
+#    refreshes twice a month,
+#  - the last trustworthy OpenStreetMap payload of each bounding box (prefix
+#    `osm-last-good/`), served when every Overpass mirror is down.
 [[r2_buckets]]
 binding = "BRANDS_BUCKET"
 bucket_name = "fuelmap-bucket"
