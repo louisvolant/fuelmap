@@ -29,7 +29,7 @@ French government fuel-price open data.
   Match, Cora, BP). When the brand is unknown (the French open data exposes none
   before the OpenStreetMap enrichment lands) the bubble carries the selected
   fuel's price instead, and unpriced unbranded bubbles display a generic fuel
-  pump mark, so a bubble is **never** drawn blank. From zoom 13.5 a
+  pump mark, so a bubble is **never** drawn blank. From zoom 12.5 a
   branded bubble opens into a capsule: mark on the left, the selected fuel's
   price in a rounded capsule right behind it.
 - 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has
@@ -43,7 +43,7 @@ French government fuel-price open data.
 - 🧭 **Stations on your route** — pick a destination on the map, then keep only
   the stations along the driving route.
 - 💶 **Prices on markers** — the selected fuel's price, in a rounded capsule
-  right of the brand mark from zoom 13.5, or **inside** the bubble when the brand
+  right of the brand mark from zoom 12.5, or **inside** the bubble when the brand
   is unknown.
 - 📍 **Station detail sheet** — every fuel with its price, **last-update time**,
   shortages, services and opening hours.

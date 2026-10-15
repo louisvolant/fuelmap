@@ -13,6 +13,7 @@ describe("zoom thresholds", () => {
     // bubbles appear, otherwise markers are rendered without their logo.
     expect(BRAND_FETCH_MIN_ZOOM).toBeLessThanOrEqual(CLUSTER_MAX_ZOOM);
     expect(PRICE_MIN_ZOOM).toBeGreaterThanOrEqual(CLUSTER_MAX_ZOOM);
+    expect(PRICE_MIN_ZOOM).toBe(12.5);
   });
 });
 

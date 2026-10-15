@@ -26,7 +26,7 @@ export const CLUSTER_MAX_ZOOM = 12;
  */
 export const BRAND_FETCH_MIN_ZOOM = CLUSTER_MAX_ZOOM;
 /** Zoom from which the price is shown next to the brand mark. */
-export const PRICE_MIN_ZOOM = 13.5;
+export const PRICE_MIN_ZOOM = 12.5;
 
 export interface StationFeatureProperties {
   id: string;
