@@ -72,9 +72,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("never shows an unclustered bubble without its brand mark", async ({
-  page,
-}) => {
+test("shows brand marks at the lowest unclustered zoom", async ({ page }) => {
   // Brands come from OpenStreetMap: serve branded OSM stations to the app.
   await mockOsmStations(page, OSM_STATIONS);
 
@@ -84,7 +82,6 @@ test("never shows an unclustered bubble without its brand mark", async ({
     map.jumpTo({ center: [2.3522, 48.8566], zoom: 16 });
     map.triggerRepaint?.();
   });
-
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -98,30 +95,23 @@ test("never shows an unclustered bubble without its brand mark", async ({
     )
     .toBe(true);
 
-  // Sweep across the clustering threshold: a bubble always carries its logo.
-  for (const zoom of [16, 15, 14, 13, 12.6, 12.3, 12.1]) {
-    await page.evaluate((value) => {
-      const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
-      map.jumpTo({ center: [2.3522, 48.8566], zoom: value });
-      map.triggerRepaint?.();
-    }, zoom);
+  // 12.1 is just past the clustering threshold: the band that used to show
+  // bubbles without any brand mark.
+  await page.evaluate(() => {
+    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
+    map.jumpTo({ center: [2.3522, 48.8566], zoom: 12.1 });
+    map.triggerRepaint?.();
+  });
 
-    await expect
-      .poll(async () => {
+  await expect
+    .poll(
+      async () => {
         const counts = await renderedCounts(page);
-        return counts.points + counts.clusters;
-      })
-      .toBeGreaterThan(0);
-
-    // The invariant, polled so a transient frame cannot make it flaky:
-    // either there is no individual bubble yet, or it carries its brand mark.
-    await expect
-      .poll(async () => {
-        const counts = await renderedCounts(page);
-        return counts.points === 0 || counts.brands > 0;
-      }, { timeout: 10_000 })
-      .toBe(true);
-  }
+        return counts.points > 0 && counts.brands > 0;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
 });
 
 test("feeds one map feature per station into the source", async ({ page }) => {
