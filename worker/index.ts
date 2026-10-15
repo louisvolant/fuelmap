@@ -18,7 +18,7 @@ import {
   isTrustworthyOverpassAnswer,
   type OverpassElement,
   type OverpassPayload,
-} from "../src/lib/osmStations";
+} from "../src/lib/overpass";
 import {
   parseBelgianMaxPrices,
   parseLuxembourgMaxPrices,
