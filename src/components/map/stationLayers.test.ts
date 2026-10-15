@@ -87,4 +87,31 @@ describe("stationsToFeatureCollection", () => {
     const unbranded = stationsToFeatureCollection([station], null);
     expect(unbranded.features[0].properties?.brandImage).toBe("");
   });
+
+  it("puts the price inside the disc when the brand is unknown", () => {
+    // The French open data has no brand, so most markers start out unbranded:
+    // an empty white disc would be meaningless.
+    const collection = stationsToFeatureCollection([station], "gazole");
+    expect(collection.features[0].properties?.priceInDisc).toBe(true);
+  });
+
+  it("keeps the price in its capsule when the brand is known", () => {
+    const branded: NormalizedStation = { ...station, brand: "Total" };
+    const collection = stationsToFeatureCollection([branded], "gazole");
+    expect(collection.features[0].properties?.priceInDisc).toBe(false);
+  });
+
+  it("never flags a dimmed marker as price-in-disc", () => {
+    const dimmed: NormalizedStation = { ...station, fuels: [], brand: undefined };
+    const collection = stationsToFeatureCollection([dimmed], null);
+    expect(collection.features).toHaveLength(0);
+
+    const brandedNoPrice: NormalizedStation = {
+      ...station,
+      fuels: [],
+      brand: "Total",
+    };
+    const kept = stationsToFeatureCollection([brandedNoPrice], null);
+    expect(kept.features[0].properties?.priceInDisc).toBe(false);
+  });
 });

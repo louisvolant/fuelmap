@@ -10,6 +10,7 @@ const CLUSTER_COUNT_LAYER = "station-cluster-count";
 const POINT_LAYER = "station-points";
 const BRAND_LAYER = "station-brands";
 const LABEL_LAYER = "station-price-labels";
+const PRICE_DISC_LAYER = "station-price-disc";
 
 /** Zoom up to which nearby stations are grouped into cluster bubbles. */
 export const CLUSTER_MAX_ZOOM = 12;
@@ -35,6 +36,13 @@ export interface StationFeatureProperties {
   brandImage: string;
   /** Station shown but with nothing to display for the current fuel. */
   dimmed: boolean;
+  /**
+   * No brand mark is available, so the bubble itself carries the price instead.
+   * A bubble must never be drawn empty: without this it would be a blank disc
+   * (the French open data has no brand at all before the OpenStreetMap
+   * enrichment lands, or while that enrichment is unavailable upstream).
+   */
+  priceInDisc: boolean;
 }
 
 export interface StationLayersOptions {
@@ -64,6 +72,8 @@ export function stationsToFeatureCollection(
     const brandImage = brand ? brandImageId(brand) : "";
     const hasPrice = typeof price === "number";
     const dimmed = showPrices && !hasPrice;
+    // No logo to draw: the disc carries the price so it is never left blank.
+    const priceInDisc = hasPrice && !brandImage;
 
     // A priced country with neither a price nor a brand has nothing to show.
     if (dimmed && !brandImage) continue;
@@ -79,6 +89,7 @@ export function stationsToFeatureCollection(
         favorite: favorites.has(station.id),
         brandImage,
         dimmed,
+        priceInDisc,
       },
     });
   }
@@ -94,4 +105,5 @@ export const STATION_LAYERS = {
   POINT_LAYER,
   BRAND_LAYER,
   LABEL_LAYER,
+  PRICE_DISC_LAYER,
 } as const;

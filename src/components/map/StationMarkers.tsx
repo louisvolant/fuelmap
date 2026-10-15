@@ -16,8 +16,15 @@ import {
   stationsToFeatureCollection,
 } from "./stationLayers";
 
-const { SOURCE_ID, CLUSTER_LAYER, CLUSTER_COUNT_LAYER, POINT_LAYER, BRAND_LAYER, LABEL_LAYER } =
-  STATION_LAYERS;
+const {
+  SOURCE_ID,
+  CLUSTER_LAYER,
+  CLUSTER_COUNT_LAYER,
+  POINT_LAYER,
+  BRAND_LAYER,
+  LABEL_LAYER,
+  PRICE_DISC_LAYER,
+} = STATION_LAYERS;
 
 const EMPTY_COLLECTION: FeatureCollection = {
   type: "FeatureCollection",
@@ -41,6 +48,8 @@ interface StationMarkersProps {
  * Marker anatomy, zoom by zoom:
  * - clustered bubbles at country scale;
  * - individual bubbles carry their brand mark whenever they are drawn;
+ * - a bubble whose brand is unknown carries the selected fuel's price instead,
+ *   so a bubble is never drawn blank;
  * - from `PRICE_MIN_ZOOM`: the bubble opens into a capsule — brand mark on the
  *   left, price in a rounded capsule right behind it.
  *
@@ -141,7 +150,8 @@ export function StationMarkers({
           });
         }
 
-        // The bubble: a round white disc holding the brand mark.
+        // The bubble: a round white disc holding the brand mark, or the price
+        // when the brand is unknown.
         if (!map.getLayer(POINT_LAYER)) {
           map.addLayer({
             id: POINT_LAYER,
@@ -168,6 +178,8 @@ export function StationMarkers({
         }
 
         // Price: a rounded capsule right behind the bubble (from PRICE_MIN_ZOOM).
+        // Only for branded bubbles; an unknown brand shows its price *inside* the
+        // disc instead (see PRICE_DISC_LAYER).
         if (!map.getLayer(LABEL_LAYER)) {
           map.addLayer({
             id: LABEL_LAYER,
@@ -178,6 +190,7 @@ export function StationMarkers({
               "all",
               ["!", ["has", "point_count"]],
               ["==", ["get", "hasPrice"], true],
+              ["==", ["get", "priceInDisc"], false],
             ],
             layout: {
               "icon-image": PRICE_PILL_IMAGE_ID,
@@ -190,6 +203,30 @@ export function StationMarkers({
               "text-size": 11,
               "text-anchor": "left",
               "text-offset": [1.5, 0],
+              "text-allow-overlap": true,
+            },
+            paint: { "text-color": "#0f172a" },
+          });
+        }
+
+        // Price inside the disc, for stations whose brand is unknown: a bubble
+        // with no logo must still say something (see `priceInDisc`). No minzoom
+        // on purpose — it is the only content of that bubble, at every zoom.
+        if (!map.getLayer(PRICE_DISC_LAYER)) {
+          map.addLayer({
+            id: PRICE_DISC_LAYER,
+            type: "symbol",
+            source: SOURCE_ID,
+            filter: [
+              "all",
+              ["!", ["has", "point_count"]],
+              ["==", ["get", "priceInDisc"], true],
+            ],
+            layout: {
+              "text-field": ["get", "priceLabel"],
+              "text-font": ["Noto Sans Regular"],
+              "text-size": 10,
+              "text-anchor": "center",
               "text-allow-overlap": true,
             },
             paint: { "text-color": "#0f172a" },
@@ -268,10 +305,15 @@ export function StationMarkers({
       map.getCanvas().style.cursor = "";
     };
 
-    const interactiveLayers = [CLUSTER_LAYER, POINT_LAYER, BRAND_LAYER, LABEL_LAYER];
+    const interactiveLayers = [
+      POINT_LAYER,
+      BRAND_LAYER,
+      LABEL_LAYER,
+      PRICE_DISC_LAYER,
+    ];
 
     map.on("click", CLUSTER_LAYER, handleClusterClick);
-    for (const layer of [POINT_LAYER, BRAND_LAYER, LABEL_LAYER]) {
+    for (const layer of interactiveLayers) {
       map.on("click", layer, handlePointClick);
       map.on("mouseenter", layer, setPointer);
       map.on("mouseleave", layer, clearPointer);

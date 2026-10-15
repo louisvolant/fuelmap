@@ -90,7 +90,7 @@ test("renders individual markers when zoomed in", async ({ page }) => {
     )
     .toBe(0);
 
-  const { pointCount, labelCount } = await page.evaluate(() => {
+  const { pointCount, priceDiscCount } = await page.evaluate(() => {
     const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
     const pointIds = new Set(
       map
@@ -99,13 +99,14 @@ test("renders individual markers when zoomed in", async ({ page }) => {
     );
     return {
       pointCount: pointIds.size,
-      labelCount: map.queryRenderedFeatures({
-        layers: ["station-price-labels"],
+      priceDiscCount: map.queryRenderedFeatures({
+        layers: ["station-price-disc"],
       }).length,
     };
   });
 
   expect(pointCount).toBeGreaterThanOrEqual(1);
-  // Price labels are rendered inside the bubbles.
-  expect(labelCount).toBeGreaterThanOrEqual(1);
+  // These fixtures have no OpenStreetMap brand, so the price is rendered inside
+  // the bubbles instead of in a capsule: a marker is never left blank.
+  expect(priceDiscCount).toBeGreaterThanOrEqual(1);
 });
