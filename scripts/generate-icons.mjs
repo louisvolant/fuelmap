@@ -1,6 +1,6 @@
 // Generates the PWA icons as PNG files, without any external dependency.
-// The artwork is a stylized fuel pump drawn on a 64x64 grid.
-// Run with: node scripts/generate-icons.mjs
+// The artwork is a stylized fuel pump standing on winding roads, drawn on a
+// 64x64 grid. Run with: node scripts/generate-icons.mjs
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -12,8 +12,35 @@ const OUT_DIR = resolve(ROOT, "public/icons");
 const BACKGROUND = [15, 23, 42]; // slate-900
 const BODY = [226, 232, 240]; // slate-200
 const DISPLAY = [56, 189, 248]; // sky-400
+const ROAD = [148, 163, 184]; // slate-400
+const ROAD_LINE = [226, 232, 240]; // slate-200
 
-/** Rectangles in a 64x64 grid: [x0, y0, x1, y1, color]. Draw order matters. */
+/** Polylines drawn behind the pump: `[points, width, color, opacity]`. */
+const PATHS = [
+  // Upper road, waving behind the pump.
+  [
+    [2, 30, 14, 23, 24, 23, 32, 30, 44, 36, 62, 30],
+    8,
+    ROAD,
+    0.5,
+  ],
+  // Thin centre line of the upper road.
+  [
+    [2, 30, 14, 23, 24, 23, 32, 30, 44, 36, 62, 30],
+    1.3,
+    ROAD_LINE,
+    0.6,
+  ],
+  // Short stretch on the lower-right, away from the pump.
+  [
+    [38, 58, 46, 52, 54, 52, 62, 56],
+    7,
+    ROAD,
+    0.28,
+  ],
+];
+
+/** Rectangles in a 64x64 grid: `[x0, y0, x1, y1, color]`. Draw order matters. */
 const RECTS = [
   [18, 15, 40, 50, BODY], // pump body
   [23, 20, 35, 30, DISPLAY], // display
@@ -22,6 +49,21 @@ const RECTS = [
   [44, 22, 48, 44, BODY], // hose, vertical
   [45, 41, 53, 47, BODY], // nozzle
 ];
+
+/** Distance from a point to a segment, in grid units. */
+function distanceToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSquared = dx * dx + dy * dy;
+  const t =
+    lengthSquared === 0
+      ? 0
+      : Math.max(
+          0,
+          Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSquared),
+        );
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -70,17 +112,46 @@ function encodePng(width, height, pixels) {
   ]);
 }
 
-/** Draw the FuelMap icon: a stylized fuel pump. */
+function mix(base, overlay, opacity) {
+  return base.map((channel, index) =>
+    Math.round(channel * (1 - opacity) + overlay[index] * opacity),
+  );
+}
+
+/** Draw the FuelMap icon: a fuel pump standing on winding roads. */
 function drawIcon(size) {
   const pixels = Buffer.alloc(size * size * 4);
   const scale = size / 64;
 
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
-      const gx = x / scale;
-      const gy = y / scale;
+      const gx = (x + 0.5) / scale;
+      const gy = (y + 0.5) / scale;
 
       let color = BACKGROUND;
+
+      // Roads first, blended over the background.
+      for (const [points, width, roadColor, opacity] of PATHS) {
+        const half = width / 2;
+        for (let i = 0; i < points.length - 2; i += 2) {
+          const distance = distanceToSegment(
+            gx,
+            gy,
+            points[i],
+            points[i + 1],
+            points[i + 2],
+            points[i + 3],
+          );
+          if (distance <= half) {
+            // Soft edge, one grid unit of anti-aliasing.
+            const coverage = Math.min(1, half - distance + 0.5);
+            color = mix(color, roadColor, opacity * coverage);
+            break;
+          }
+        }
+      }
+
+      // Then the pump on top, hard edges.
       for (const [x0, y0, x1, y1, rectColor] of RECTS) {
         if (gx >= x0 && gx < x1 && gy >= y0 && gy < y1) color = rectColor;
       }
