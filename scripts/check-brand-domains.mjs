@@ -14,7 +14,6 @@
 import {
   BRANDFETCH_DOMAINS,
   assetHostPath,
-  credentialedAssetUrl,
   pickBrandfetchLogos,
   sniffImageFormat,
 } from "../src/lib/brandfetch.ts";
@@ -33,6 +32,17 @@ const base =
 const requested = process.argv.slice(2);
 const ids = requested.length > 0 ? requested : Object.keys(BRANDFETCH_DOMAINS);
 const MAX_CANDIDATES = 4;
+
+// Assets must be fetched exactly as a browser embeds them: the CDN answers 200
+// with its HTML documentation page when the request carries no browser
+// user-agent and referer. The bytes are then sniffed, because an HTTP 200 alone
+// proves nothing.
+const ASSET_HEADERS = {
+  "user-agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+  referer: "https://github.com/louisvolant/fuelmap",
+  accept: "image/*,*/*;q=0.8",
+};
 
 let usable = 0;
 
@@ -79,10 +89,10 @@ for (const id of ids) {
 
   let found = false;
   for (const [index, candidate] of candidates.entries()) {
-    const url = credentialedAssetUrl(candidate.src, apiKey);
+    const url = candidate.src;
     const label = `${assetHostPath(url)}${url.includes("?") ? "?…" : ""}`;
     try {
-      const asset = await fetch(url);
+      const asset = await fetch(url, { headers: ASSET_HEADERS });
       if (!asset.ok) {
         console.log(`  #${index + 1}  ${label}  -> ${asset.status}`);
         continue;

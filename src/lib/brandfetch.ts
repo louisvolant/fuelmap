@@ -179,27 +179,6 @@ export function sniffImageFormat(bytes: Uint8Array): ImageFormat | undefined {
   return undefined;
 }
 
-/**
- * The Brandfetch CDN only serves its bytes when the client id travels in the `c`
- * query parameter; without it, it redirects to its documentation. Adding it when
- * missing costs nothing and rescues links that arrive unsigned.
- */
-export function credentialedAssetUrl(
-  src: string,
-  clientId: string | undefined,
-): string {
-  if (!clientId) return src;
-  try {
-    const url = new URL(src);
-    if (url.hostname.endsWith("brandfetch.io") && !url.searchParams.has("c")) {
-      url.searchParams.set("c", clientId);
-    }
-    return url.toString();
-  } catch {
-    return src;
-  }
-}
-
 /** `host/path` of a URL, without its query string (which may carry a token). */
 export function assetHostPath(src: string): string {
   try {

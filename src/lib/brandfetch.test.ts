@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   BRANDFETCH_DOMAINS,
   assetHostPath,
-  credentialedAssetUrl,
   logoContentType,
   pickBrandfetchLogo,
   pickBrandfetchLogos,
@@ -117,26 +116,6 @@ describe("sniffImageFormat", () => {
   it("rejects anything else, in particular the CDN's HTML page", () => {
     expect(sniffImageFormat(encode("<!DOCTYPE html><html lang=\"en\">"))).toBeUndefined();
     expect(sniffImageFormat(new Uint8Array())).toBeUndefined();
-  });
-});
-
-describe("credentialedAssetUrl", () => {
-  it("adds the client parameter the CDN requires when it is missing", () => {
-    expect(
-      credentialedAssetUrl("https://cdn.brandfetch.io/domain/x.com/icon", "abc"),
-    ).toBe("https://cdn.brandfetch.io/domain/x.com/icon?c=abc");
-  });
-
-  it("leaves an already signed URL and foreign hosts untouched", () => {
-    expect(
-      credentialedAssetUrl("https://cdn.brandfetch.io/domain/x.com?c=zzz", "abc"),
-    ).toBe("https://cdn.brandfetch.io/domain/x.com?c=zzz");
-    expect(credentialedAssetUrl("https://example.com/logo.svg", "abc")).toBe(
-      "https://example.com/logo.svg",
-    );
-    expect(credentialedAssetUrl("https://cdn.brandfetch.io/x", undefined)).toBe(
-      "https://cdn.brandfetch.io/x",
-    );
   });
 });
 

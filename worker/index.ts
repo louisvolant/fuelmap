@@ -21,7 +21,6 @@ import {
 import {
   BRANDFETCH_DOMAINS,
   assetHostPath,
-  credentialedAssetUrl,
   logoContentType,
   pickBrandfetchLogos,
   sniffImageFormat,
@@ -61,6 +60,23 @@ interface BrandRefreshResult {
   asset?: string;
 }
 
+/**
+ * Assets are downloaded as a browser would embed them, because the CDN refuses
+ * programmatic clients: without a browser `user-agent` **and** a `referer` it
+ * answers `200` with its documentation page instead of the logo. The URLs still
+ * come from the authenticated Brand API call below; the bytes are validated
+ * (see `sniffImageFormat`) so this can never poison the cache again.
+ *
+ * Note: appending a `c` client parameter to these links returns a `403`, so the
+ * URL from the API is used untouched.
+ */
+const ASSET_REQUEST_HEADERS: Record<string, string> = {
+  "user-agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+  referer: "https://github.com/louisvolant/fuelmap",
+  accept: "image/*,*/*;q=0.8",
+};
+
 /** Snapshot one brand from Brandfetch into R2. Returns the outcome status. */
 async function refreshBrand(env: Env, id: string): Promise<BrandRefreshResult> {
   const domain = BRANDFETCH_DOMAINS[id as keyof typeof BRANDFETCH_DOMAINS];
@@ -84,18 +100,20 @@ async function refreshBrand(env: Env, id: string): Promise<BrandRefreshResult> {
     const brand = (await response.json()) as BrandfetchBrand;
     result.name = brand.name;
 
-    // Assets served by the Logo CDN cannot always be downloaded (it redirects to
-    // its documentation), so walk the candidates until one returns real bytes.
+    // Not every asset the API proposes can be downloaded, so walk the candidates
+    // until one returns real image bytes.
     const candidates = pickBrandfetchLogos(brand).slice(0, 8);
     if (candidates.length === 0) return { ...result, status: "no_logo" };
 
     let failure = "no_logo";
     let lastAsset = "";
     for (const candidate of candidates) {
-      const assetUrl = credentialedAssetUrl(candidate.src, apiKey);
-      lastAsset = assetHostPath(assetUrl);
-      const asset = await fetch(assetUrl, {
-        headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+      lastAsset = assetHostPath(candidate.src);
+      const asset = await fetch(candidate.src, {
+        headers: {
+          ...ASSET_REQUEST_HEADERS,
+          ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+        },
       });
       if (!asset.ok) {
         failure = `asset_${asset.status}`;
