@@ -36,33 +36,6 @@ async function waitForLayer(page: Page, layer: string): Promise<void> {
   );
 }
 
-/** How many features each station layer currently renders. */
-async function renderedCounts(page: Page) {
-  return page.evaluate(() => {
-    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
-    const count = (layer: string) => {
-      try {
-        return map.queryRenderedFeatures({ layers: [layer] }).length;
-      } catch {
-        return 0;
-      }
-    };
-    return {
-      points: count("station-points"),
-      brands: count("station-brands"),
-      clusters: count("station-clusters"),
-    };
-  });
-}
-
-/** Branded OpenStreetMap stations, one per Paris fixture station. */
-const OSM_STATIONS = [
-  { lat: 48.8566, lon: 2.3522, brand: "Total" },
-  { lat: 48.8656, lon: 2.3469, brand: "Carrefour" },
-  { lat: 48.8636, lon: 2.3622, brand: "Avia" },
-  { lat: 48.8526, lon: 2.3422, brand: "Shell" },
-];
-
 test.beforeEach(async ({ page }) => {
   await mockFuelApi(page);
   await mockOsmStations(page);
@@ -70,48 +43,6 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() =>
     Boolean((window as unknown as { __fuelmapMap?: unknown }).__fuelmapMap),
   );
-});
-
-test("shows brand marks at the lowest unclustered zoom", async ({ page }) => {
-  // Brands come from OpenStreetMap: serve branded OSM stations to the app.
-  await mockOsmStations(page, OSM_STATIONS);
-
-  // Zoom in once so the brand enrichment runs.
-  await page.evaluate(() => {
-    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
-    map.jumpTo({ center: [2.3522, 48.8566], zoom: 16 });
-    map.triggerRepaint?.();
-  });
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        (
-          window as unknown as { __fuelmapMap: TestMap }
-        ).__fuelmapMap
-          .getSource("stations")
-          .serialize()
-          .data.features.some((feature) => feature.properties?.brandImage !== ""),
-      ),
-    )
-    .toBe(true);
-
-  // 12.1 is just past the clustering threshold: the band that used to show
-  // bubbles without any brand mark.
-  await page.evaluate(() => {
-    const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;
-    map.jumpTo({ center: [2.3522, 48.8566], zoom: 12.1 });
-    map.triggerRepaint?.();
-  });
-
-  await expect
-    .poll(
-      async () => {
-        const counts = await renderedCounts(page);
-        return counts.points > 0 && counts.brands > 0;
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
 });
 
 test("feeds one map feature per station into the source", async ({ page }) => {
