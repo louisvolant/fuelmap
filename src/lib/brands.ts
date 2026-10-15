@@ -82,7 +82,7 @@ export const BRANDS: BrandDefinition[] = [
   { id: "elan", label: "Élan", aliases: ["Elan", "Élan", "Elan Station"] },
   { id: "match", label: "Supermarché Match", aliases: ["Match", "Supermarché Match", "Supermarche Match"] },
   { id: "cora", label: "Cora", aliases: ["Cora", "Cora Station"] },
-  { id: "bp", label: "BP", aliases: ["BP", "BP Express"] },
+  { id: "bp", label: "BP", aliases: ["BP", "BP Express", "British Petroleum"] },
 ];
 
 /** Normalize a brand string for matching: accents, case and punctuation. */
@@ -97,16 +97,33 @@ function normalize(value: string): string {
 const EXACT = new Map<string, BrandId>();
 /** Aliases long enough to be safely used for substring matching. */
 const CONTAINS: { alias: string; id: BrandId }[] = [];
+/** Aliases too short to be searched (`U`, `BP`): matched as whole words. */
+const WORDS: { pattern: RegExp; id: BrandId }[] = [];
 
 for (const brand of BRANDS) {
   for (const alias of brand.aliases) {
     const key = normalize(alias);
     EXACT.set(key, brand.id);
-    if (key.length >= 3) CONTAINS.push({ alias: key, id: brand.id });
+    if (key.length >= 3) {
+      CONTAINS.push({ alias: key, id: brand.id });
+    } else {
+      // "bp" must match `BP France` or `BP-Autohof`, but never `bpost`.
+      WORDS.push({ pattern: new RegExp(`\\b${key}\\b`), id: brand.id });
+    }
   }
 }
 // Longest aliases first so "carrefourmarket" wins over "carrefour".
 CONTAINS.sort((a, b) => b.alias.length - a.alias.length);
+
+/** Lowercased, accent-free value with every separator turned into a space. */
+function toWords(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
 /** Resolve a raw brand string to a canonical brand id, or `undefined`. */
 export function matchBrand(rawBrand: string | undefined | null): BrandId | undefined {
@@ -119,6 +136,11 @@ export function matchBrand(rawBrand: string | undefined | null): BrandId | undef
 
   for (const { alias, id } of CONTAINS) {
     if (value.includes(alias)) return id;
+  }
+
+  const words = toWords(rawBrand);
+  for (const { pattern, id } of WORDS) {
+    if (pattern.test(words)) return id;
   }
   return undefined;
 }

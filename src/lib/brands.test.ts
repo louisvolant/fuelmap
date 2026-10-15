@@ -23,6 +23,18 @@ describe("matchBrand", () => {
     expect(matchBrand("Auberge du Lac")).toBeUndefined();
   });
 
+  it("matches short brands as whole words", () => {
+    // "bp" is too short to be searched for, but appears in real provider and
+    // OpenStreetMap strings — it must match `BP France`, never `bpost`.
+    expect(matchBrand("BP")).toBe("bp");
+    expect(matchBrand("BP France")).toBe("bp");
+    expect(matchBrand("BP-Autohof")).toBe("bp");
+    expect(matchBrand("British Petroleum")).toBe("bp");
+    expect(matchBrand("bpost")).toBeUndefined();
+    expect(matchBrand("Super U")).toBe("u");
+    expect(matchBrand("U Express")).toBe("u");
+  });
+
   it("returns undefined for unknown brands", () => {
     expect(matchBrand("Random Station")).toBeUndefined();
     expect(matchBrand("")).toBeUndefined();
