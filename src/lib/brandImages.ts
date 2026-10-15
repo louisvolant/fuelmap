@@ -9,10 +9,180 @@ import { brandImageId, LOCAL_ONLY_BRANDS, type BrandId } from "./brands";
  *
  * The client therefore always *tries* the snapshot first and silently falls back
  * to the bundled mark, so it never waits for a third party and works offline.
+ *
+ * Whatever the source, the pixels are **normalised for a round marker** before
+ * they reach MapLibre (see `styliseLogoPixels`): Brandfetch serves most brands as
+ * **JPEG**, which has no alpha channel, so a transparent logo comes back baked on
+ * a white or light-grey square whose corners would stick out of the bubble.
  */
 const LOGO_SIZE = 64;
+/**
+ * Share of the canvas the artwork may occupy. It is `contain`ed in this box, so
+ * the circular mask around it never shaves a wordmark's ends.
+ */
+const LOGO_FIT = 0.88;
 
 const imageDataCache = new Map<BrandId, ImageData>();
+
+/** The part of `ImageData` the logo styliser works on. */
+export interface PixelBuffer {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+/** Channel distance under which a pixel is definitely the background. */
+const BACKGROUND_CLEAR = 18;
+/** Channel distance above which a pixel is definitely *not* the background. */
+const BACKGROUND_KEEP = 52;
+/** How far from the edge the background is sampled (avoids border artefacts). */
+const CORNER_INSET = 2;
+
+function clamp01(value: number): number {
+  return value < 0 ? 0 : value > 1 ? 1 : value;
+}
+
+/** Alpha above which a pixel counts as artwork (fits the circle test). */
+const ARTWORK_ALPHA = 40;
+/** How far the artwork may reach towards the circle's edge (hairline margin). */
+export const ARTWORK_REACH = 0.98;
+
+/**
+ * Average colour of the four corners, or `null` when they are not a uniform,
+ * opaque, light background.
+ *
+ * The `opaque` test matters: a logo that is *already* transparent has
+ * `rgb(0,0,0,0)` corners, and keying white out of it could erase white artwork.
+ * The `light` test keeps marks drawn on their own brand colour intact.
+ */
+function cornerBackground(
+  pixels: PixelBuffer,
+): [number, number, number] | null {
+  const { data, width, height } = pixels;
+  const xs = [CORNER_INSET, width - 1 - CORNER_INSET];
+  const ys = [CORNER_INSET, height - 1 - CORNER_INSET];
+
+  const corners: [number, number, number][] = [];
+  let minChannel = 255;
+  let maxChannel = 0;
+
+  for (const y of ys) {
+    for (const x of xs) {
+      const index = (y * width + x) * 4;
+      const alpha = data[index + 3];
+      if (alpha < 200) return null;
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+      corners.push([red, green, blue]);
+      minChannel = Math.min(minChannel, red, green, blue);
+      maxChannel = Math.max(maxChannel, red, green, blue);
+    }
+  }
+
+  // A uniform, neutral, light colour — the signature of a flattened JPEG.
+  const average = corners
+    .reduce<[number, number, number]>(
+      (sum, corner) => [
+        sum[0] + corner[0] / corners.length,
+        sum[1] + corner[1] / corners.length,
+        sum[2] + corner[2] / corners.length,
+      ],
+      [0, 0, 0],
+    )
+    .map(Math.round) as [number, number, number];
+
+  const luminance =
+    (average[0] * 299 + average[1] * 587 + average[2] * 114) / 1000;
+  if (luminance < 200) return null;
+  if (maxChannel - minChannel > 30) return null;
+
+  return average;
+}
+
+/**
+ * Drop the flat background, when the four corners are one uniform light colour
+ * (what a transparent logo looks like once flattened to JPEG). Every pixel close
+ * to that colour becomes transparent; the ramp keeps anti-aliased edges and drop
+ * shadows soft instead of jagged.
+ *
+ * Mutates in place: the buffer is at most 64×64, so this is a few microseconds.
+ */
+export function keyLogoBackground(pixels: PixelBuffer): void {
+  const background = cornerBackground(pixels);
+  if (!background) return;
+
+  const { data, width, height } = pixels;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const distance = Math.max(
+        Math.abs(data[index] - background[0]),
+        Math.abs(data[index + 1] - background[1]),
+        Math.abs(data[index + 2] - background[2]),
+      );
+      const factor = clamp01(
+        (distance - BACKGROUND_CLEAR) / (BACKGROUND_KEEP - BACKGROUND_CLEAR),
+      );
+      if (factor === 0) {
+        data[index + 3] = 0;
+      } else if (factor < 1) {
+        data[index + 3] = Math.round(data[index + 3] * factor);
+      }
+    }
+  }
+}
+
+/**
+ * Distance from the centre to the furthest artwork pixel, as a fraction of the
+ * circle's radius. `1` means the artwork touches the edge of the disc; more than
+ * `1` means the mask would shave it.
+ */
+export function artworkReach(pixels: PixelBuffer): number {
+  const { data, width, height } = pixels;
+  const centreX = (width - 1) / 2;
+  const centreY = (height - 1) / 2;
+  const radius = Math.min(width, height) / 2;
+
+  let reach = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (data[(y * width + x) * 4 + 3] < ARTWORK_ALPHA) continue;
+      const distance = Math.hypot(x - centreX, y - centreY) / radius;
+      if (distance > reach) reach = distance;
+    }
+  }
+  return reach;
+}
+
+/**
+ * Clip the bitmap to the inscribed circle, with a one-pixel feather, so a mark
+ * whose artwork still reaches the corners is trimmed into a disc — the bubble
+ * never shows a square.
+ */
+export function maskLogoToCircle(pixels: PixelBuffer): void {
+  const { data, width, height } = pixels;
+  const centreX = (width - 1) / 2;
+  const centreY = (height - 1) / 2;
+  const radius = Math.min(width, height) / 2;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const distance = Math.hypot(x - centreX, y - centreY);
+      const mask = clamp01(radius - distance + 0.5);
+      if (mask < 1) {
+        data[index + 3] = Math.round(data[index + 3] * mask);
+      }
+    }
+  }
+}
+
+/** Both steps: a logo ready to be painted on a round, white bubble. */
+export function styliseLogoPixels(pixels: PixelBuffer): void {
+  keyLogoBackground(pixels);
+  maskLogoToCircle(pixels);
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -23,7 +193,14 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Draw an image centred in a transparent square and return its pixels. */
+/**
+ * Draw an image `contain`ed in a square, then normalise it for the round bubble.
+ *
+ * The artwork is first drawn in the `LOGO_FIT` box, and — when it still reaches
+ * past the circle (a square composition like Esso's or bp's) — redrawn smaller
+ * so the mask never shaves it. A wordmark, whose extremes are at mid-height,
+ * keeps the full box.
+ */
 function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData {
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -34,18 +211,38 @@ function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData
 
   const width = image.naturalWidth || size;
   const height = image.naturalHeight || size;
-  const scale = Math.min(size / width, size / height);
-  const drawWidth = width * scale;
-  const drawHeight = height * scale;
+  const box = size * LOGO_FIT;
+  const scale = Math.min(box / width, box / height);
+  let drawWidth = width * scale;
+  let drawHeight = height * scale;
 
-  context.drawImage(
-    image,
-    (size - drawWidth) / 2,
-    (size - drawHeight) / 2,
-    drawWidth,
-    drawHeight,
-  );
-  return context.getImageData(0, 0, size, size);
+  const draw = () => {
+    context.clearRect(0, 0, size, size);
+    context.drawImage(
+      image,
+      (size - drawWidth) / 2,
+      (size - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
+  };
+
+  draw();
+  let pixels = context.getImageData(0, 0, size, size);
+  // Measure the artwork without its (light) background, which fills the corners.
+  keyLogoBackground(pixels);
+  const reach = artworkReach(pixels);
+
+  if (reach > ARTWORK_REACH) {
+    const shrink = ARTWORK_REACH / reach;
+    drawWidth *= shrink;
+    drawHeight *= shrink;
+    draw();
+    pixels = context.getImageData(0, 0, size, size);
+  }
+
+  styliseLogoPixels(pixels);
+  return pixels;
 }
 
 /** Rasterize an image at its natural size, keeping its aspect ratio. */

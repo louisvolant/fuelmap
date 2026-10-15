@@ -26,8 +26,12 @@ French government fuel-price open data.
 - 🏷️ **Brand mark on every bubble** — from zoom 12.5 each station is a round
   white bubble with its brand mark (TotalEnergies, Esso, E.Leclerc, Carrefour,
   Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
-  Match, Cora, BP). When the brand is unknown (the French open data exposes none
-  before the OpenStreetMap enrichment lands) the bubble carries the selected
+  Match, Cora, BP). Whatever the source format, a logo is **normalised for the
+  round bubble** before it is drawn: the flat white or grey background a JPEG
+  carries is dropped, the bitmap is clipped to a disc, and an artwork that would
+  reach past that circle is scaled down, so nothing is ever shaved and no square
+  corner ever pokes out. When the brand is unknown (the French open data exposes
+  none before the OpenStreetMap enrichment lands) the bubble carries the selected
   fuel's price instead, and unpriced unbranded bubbles display a generic fuel
   pump mark, so a bubble is **never** drawn blank. From zoom 12.5 a
   branded bubble opens into a capsule: mark on the left, the selected fuel's
@@ -151,6 +155,15 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
   unindexed by Brandfetch like Dyneff, Élan, Fulli, Match serve their dedicated
   vector marks directly without attempting a remote fetch), so it never waits for
   a third party and keeps working offline.
+- **Every logo is normalised for the round bubble** (`src/lib/brandImages.ts`).
+  Brandfetch serves most brands as **JPEG**, which has no alpha channel, so a
+  transparent logo comes back baked on a white (or light-grey) square whose
+  corners poked out of the bubble. Before the bitmap reaches MapLibre:
+  `keyLogoBackground` drops that flat background (sampled from the four corners,
+  with a soft ramp so anti-aliased edges and drop shadows survive),
+  `artworkReach` measures how far the artwork extends, the artwork is redrawn
+  smaller when it would reach past the circle, and `maskLogoToCircle` clips it to
+  a disc. The bundled SVG marks go through the same pipeline.
 
 > **Trademarks.** Logos are the property of their respective owners and are used
 > here for identification only; this app is not affiliated with, nor endorsed by,
