@@ -13,7 +13,10 @@ import {
   saveStations,
   setMeta,
 } from "@/lib/db/indexedDb";
+import { BRAND_FETCH_MIN_ZOOM } from "@/components/map/stationLayers";
+import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { useAreaStationsStore } from "@/stores/areaStationsStore";
+import { useOsmStations } from "./useOsmStations";
 
 const DEFAULT_STALE_TIME = 10 * 60 * 1000;
 
@@ -113,18 +116,37 @@ export interface CountryStations {
   refetch: () => void;
 }
 
-/** Pick the right loading strategy for the active country. */
+/** Pick the right loading strategy for the active country, with automatic brand enrichment. */
 export function useCountryStations(
   country: CountryCode,
   bounds: BoundingBox | null,
+  zoom?: number,
 ): CountryStations {
-  const source = getCountry(country).dataSource;
+  const definition = getCountry(country);
+  const source = definition.dataSource;
   const bulk = useBulkStations(country);
   const area = useAreaStations(country, bounds);
 
+  const needsEnrichment = Boolean(definition.needsBrandEnrichment);
+  const osmBounds =
+    needsEnrichment && zoom !== undefined && zoom >= BRAND_FETCH_MIN_ZOOM
+      ? bounds
+      : null;
+  const osm = useOsmStations(country, osmBounds);
+
+  const rawStations =
+    source?.kind === "area" ? area.stations : (bulk.data ?? EMPTY_STATIONS);
+
+  const stations = useMemo(() => {
+    if (!needsEnrichment || !osm.data || osm.data.length === 0) {
+      return rawStations;
+    }
+    return enrichStationsWithBrands(rawStations, osm.data);
+  }, [needsEnrichment, rawStations, osm.data]);
+
   if (source?.kind === "area") {
     return {
-      stations: area.stations,
+      stations,
       isLoading: area.isLoading && area.stations.length === 0,
       isError: area.isError,
       refetch: () => void area.refetch(),
@@ -132,7 +154,7 @@ export function useCountryStations(
   }
 
   return {
-    stations: bulk.data ?? [],
+    stations,
     isLoading: bulk.isLoading,
     isError: bulk.isError,
     refetch: () => void bulk.refetch(),

@@ -15,4 +15,5 @@ export const france: CountryDefinition = {
   priceMode: "station",
   fuelCatalog: FRENCH_FUELS,
   dataSource: FRANCE_DATA_SOURCE,
+  needsBrandEnrichment: true,
 };

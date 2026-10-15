@@ -30,15 +30,12 @@ import {
 } from "@/hooks/useFilteredStations";
 import { useCountryStations } from "@/hooks/useCountryStations";
 import { useInitialView } from "@/hooks/useInitialView";
-import { useOsmStations } from "@/hooks/useOsmStations";
 import { usePanelPresentation } from "@/hooks/usePanelPresentation";
 import { useTheme } from "@/hooks/useTheme";
 import { collectServices } from "@/lib/filters";
 import { resolveMapStyle } from "@/lib/mapStyles";
-import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { stationsAlongRoute } from "@/lib/routeStations";
 import { sortStations } from "@/lib/sortStations";
-import { BRAND_FETCH_MIN_ZOOM } from "@/components/map/stationLayers";
 import { useCountryStore } from "@/stores/countryStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFilterStore } from "@/stores/filterStore";
@@ -66,24 +63,12 @@ export default function App() {
   const { stations, isLoading, isError, refetch } = useCountryStations(
     countryCode,
     bounds,
-  );
-
-  const osmStations = useOsmStations(
-    countryCode,
-    view && view.zoom >= BRAND_FETCH_MIN_ZOOM ? view.bounds : null,
-  );
-
-  const enrichedStations = useMemo(
-    () =>
-      countryCode === "FR"
-        ? enrichStationsWithBrands(stations, osmStations.data ?? [])
-        : stations,
-    [countryCode, stations, osmStations.data],
+    view?.zoom,
   );
 
   const userPosition = useGeolocationStore((state) => state.position);
   const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
-  const filteredStations = useFilteredStations(enrichedStations, {
+  const filteredStations = useFilteredStations(stations, {
     center: userPosition ?? undefined,
     maxDistanceMeters: maxDistanceMeters ?? undefined,
   });
@@ -163,8 +148,8 @@ export default function App() {
   }, [map]);
 
   const allServices = useMemo(
-    () => collectServices(enrichedStations),
-    [enrichedStations],
+    () => collectServices(stations),
+    [stations],
   );
 
   // Restrict to the route corridor when the route filter is enabled.
@@ -189,8 +174,8 @@ export default function App() {
 
   const selectedStation = useMemo(
     () =>
-      enrichedStations.find((station) => station.id === selectedStationId) ?? null,
-    [enrichedStations, selectedStationId],
+      stations.find((station) => station.id === selectedStationId) ?? null,
+    [stations, selectedStationId],
   );
 
   // Recenter on the selected station, leaving room for the side panel so the
@@ -284,7 +269,7 @@ export default function App() {
         <FavoritesSheet
           open={openSheet === "favorites"}
           onClose={() => setOpenSheet(null)}
-          stations={enrichedStations}
+          stations={stations}
           onSelect={(id) => selectStation(id)}
         />
 

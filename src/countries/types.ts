@@ -156,6 +156,11 @@ export interface CountryDefinition {
   fuelCatalog: FuelDefinition[];
   /** Pricing source, or `null` when only OSM positions are available. */
   dataSource: FuelDataSource | null;
+  /**
+   * Whether this country needs OpenStreetMap brand enrichment
+   * (e.g. France, whose official open data does not expose brand names).
+   */
+  needsBrandEnrichment?: boolean;
 }
 
 export type PriceMode = "station" | "national-max" | "none";

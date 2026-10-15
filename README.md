@@ -95,8 +95,10 @@ French government fuel-price open data.
   public Overpass API rate-limits direct browser use — and matched to the nearest
   official station within 120 m, with a **unique assignment** (each OSM station
   brands at most one official station). Results are cached for a week, both at
-  the edge and in IndexedDB. Only used for France; Spain (`Rótulo`) and Germany
-  (`brand`) expose brands natively.
+  the edge and in IndexedDB. Enrichment is encapsulated inside `useCountryStations`
+  via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
+  country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)
+  expose brands natively.
 
 ### Brand marks
 
