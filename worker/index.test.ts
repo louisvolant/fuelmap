@@ -1,0 +1,192 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import worker from "./index";
+
+/**
+ * The OpenStreetMap endpoint is the one thing that can lose brand marks for a
+ * whole country: the public Overpass mirrors are regularly saturated, and the
+ * payload is cached for a week. These tests pin the contract:
+ *  - a failure is never cached (it must not poison the week),
+ *  - the last good payload kept in R2 is served during an outage (and is never
+ *    written back to the cache, so a recovered Overpass is picked up at once).
+ */
+
+const OSM_PATH = "/api/osm/v3/stations";
+const QUERY = "?west=2.40&south=48.80&east=2.50&north=48.83";
+const LAST_GOOD_KEY = "osm-last-good/3/2.40,48.80,2.50,48.83";
+
+interface StoredObject {
+  value: string;
+  options?: { customMetadata?: Record<string, string> };
+}
+
+function makeBucket() {
+  const store = new Map<string, StoredObject>();
+  return {
+    store,
+    async get(key: string) {
+      const entry = store.get(key);
+      if (!entry) return null;
+      return {
+        body: new Response(entry.value).body,
+        httpMetadata: { contentType: "application/json" },
+        customMetadata: {},
+        json: async () => JSON.parse(entry.value),
+      };
+    },
+    async put(key: string, value: unknown, options?: StoredObject["options"]) {
+      store.set(key, {
+        value:
+          typeof value === "string"
+            ? value
+            : new TextDecoder().decode(value as Uint8Array),
+        options,
+      });
+      return {};
+    },
+    async delete(key: string) {
+      store.delete(key);
+    },
+    async list() {
+      return { objects: [] };
+    },
+  };
+}
+
+function makeContext() {
+  const pending: Promise<unknown>[] = [];
+  return {
+    pending,
+    waitUntil: (promise: Promise<unknown>) => {
+      pending.push(promise);
+    },
+  };
+}
+
+const cachePut = vi.fn(async () => undefined);
+const cacheMatch = vi.fn(async () => undefined);
+
+function makeEnv(bucket: ReturnType<typeof makeBucket>) {
+  return {
+    ASSETS: { fetch: async () => new Response("app") },
+    BRANDS_BUCKET: bucket,
+  } as never;
+}
+
+/** Every mirror fails, as happens when Overpass is saturated. */
+function failUpstream() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new Error("mirror down");
+    }),
+  );
+}
+
+/** Every mirror answers a real Overpass payload. */
+function serveUpstream(payload: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    ),
+  );
+}
+
+beforeEach(() => {
+  cachePut.mockClear();
+  cacheMatch.mockClear();
+  vi.stubGlobal("caches", { default: { match: cacheMatch, put: cachePut } });
+});
+
+describe("GET /api/osm/v3/stations", () => {
+  it("serves the last good payload from R2 when every mirror is down", async () => {
+    const bucket = makeBucket();
+    bucket.store.set(LAST_GOOD_KEY, {
+      value: JSON.stringify({
+        stations: [
+          { key: "node/1", lat: 48.81, lon: 2.45, brand: "Total", opening24h: false },
+        ],
+      }),
+    });
+    failUpstream();
+
+    const response = await worker.fetch(
+      new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+      makeEnv(bucket),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-fuelmap-stale")).toBe("1");
+    expect(await response.json()).toEqual({
+      stations: [
+        { key: "node/1", lat: 48.81, lon: 2.45, brand: "Total", opening24h: false },
+      ],
+    });
+    // Never re-cached: the next request must retry Overpass.
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("answers 502 and caches nothing when Overpass is down and R2 is empty", async () => {
+    const bucket = makeBucket();
+    failUpstream();
+
+    const response = await worker.fetch(
+      new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+      makeEnv(bucket),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(502);
+    expect(cachePut).not.toHaveBeenCalled();
+    expect([...bucket.store.keys()]).toEqual([]);
+  });
+
+  it("keeps the payload in R2 after a successful query", async () => {
+    const bucket = makeBucket();
+    serveUpstream({
+      elements: [
+        {
+          type: "node",
+          id: 1,
+          lat: 48.81,
+          lon: 2.45,
+          tags: { amenity: "fuel", brand: "Total" },
+        },
+      ],
+    });
+    const context = makeContext();
+
+    const response = await worker.fetch(
+      new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+      makeEnv(bucket),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    await Promise.all(context.pending);
+
+    const stored = bucket.store.get(LAST_GOOD_KEY);
+    expect(stored).toBeDefined();
+    expect(stored?.options?.customMetadata?.at).toBeTruthy();
+    expect(JSON.parse(stored?.value ?? "{}")).toEqual({
+      stations: [
+        {
+          key: "node/1",
+          lat: 48.81,
+          lon: 2.45,
+          brand: "Total",
+          city: null,
+          address: null,
+          postalCode: null,
+          opening24h: false,
+        },
+      ],
+    });
+    expect(cachePut).toHaveBeenCalledTimes(1);
+  });
+});

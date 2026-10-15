@@ -223,7 +223,8 @@ Open the printed URL (default http://localhost:5173).
 
 - **Unit / component tests** (Vitest + Testing Library) live next to the source as
   `*.test.ts(x)`. jsdom is set up with `fake-indexeddb`, a stubbed `fetch` (no real
-  network) and a mocked `maplibre-gl`.
+  network) and a mocked `maplibre-gl`. The Worker's own tests live next to it
+  (`worker/index.test.ts`) and pin the OpenStreetMap cache contract.
 - **End-to-end tests** (Playwright) live in `e2e/`. They **intercept the fuel API**
   with fixtures (`e2e/fixtures/`) so tests are hermetic and deterministic, and run
   against both a desktop and a mobile viewport.
@@ -232,7 +233,7 @@ Open the printed URL (default http://localhost:5173).
   (`e2e/support/mockBasemap.ts`) and Overpass returns an empty set by default
   (`e2e/support/fixtures.ts`). Setup assertions wait on the **map source**
   rather than on rendered features (`e2e/support/map.ts`), which is fast and
-  never flaky under parallel load. The whole suite runs in ~30 s of 80 tests.
+  never flaky under parallel load. The whole suite runs in ~60 s of 104 tests.
   Specs must import `test` from `./support/fixtures` rather than
   `@playwright/test`.
 - Covered flows: map + markers, fuel and advanced filters, station detail, navigation

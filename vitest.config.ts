@@ -13,9 +13,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    // Unit/component tests live next to the source. End-to-end specs in `e2e/`
-    // are run by Playwright, not Vitest.
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Unit/component tests live next to the source; the Worker's live next to
+    // the Worker. End-to-end specs in `e2e/` are run by Playwright, not Vitest.
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "worker/**/*.{test,spec}.ts"],
     css: false,
   },
 });
