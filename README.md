@@ -144,8 +144,10 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
   the whole name → domain table against the live Brand API and prints, per brand,
   the resolved name and the picked logo variant — the fastest way to fix the
   domains flagged `// verify`.
-- The client always tries `/brands/<id>` first and falls back to the bundled SVG,
-  so it never waits for a third party and keeps working offline.
+- The client tries `/brands/<id>` first and falls back to the bundled SVG (brands
+  unindexed by Brandfetch like Dyneff, Élan, Fulli, Match serve their dedicated
+  vector marks directly without attempting a remote fetch), so it never waits for
+  a third party and keeps working offline.
 
 > **Trademarks.** Logos are the property of their respective owners and are used
 > here for identification only; this app is not affiliated with, nor endorsed by,

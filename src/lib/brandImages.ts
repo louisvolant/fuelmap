@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { brandSvgDataUrl, remoteBrandLogoUrl } from "./brandLogos";
-import { brandImageId, type BrandId } from "./brands";
+import { brandImageId, LOCAL_ONLY_BRANDS, type BrandId } from "./brands";
 
 /**
  * Brand logos are served by the Worker from R2 (`/brands/<id>`), snapshotted
@@ -69,10 +69,12 @@ async function loadBrandLogo(id: BrandId): Promise<ImageData> {
   if (cached) return cached;
 
   let image: HTMLImageElement | undefined;
-  try {
-    image = await loadImage(remoteBrandLogoUrl(id));
-  } catch {
-    image = undefined;
+  if (!LOCAL_ONLY_BRANDS.has(id)) {
+    try {
+      image = await loadImage(remoteBrandLogoUrl(id));
+    } catch {
+      image = undefined;
+    }
   }
   if (!image) {
     image = await loadImage(brandSvgDataUrl(id));

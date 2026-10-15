@@ -1,5 +1,5 @@
 import { brandSvgDataUrl, remoteBrandLogoUrl } from "@/lib/brandLogos";
-import { matchBrand } from "@/lib/brands";
+import { matchBrand, LOCAL_ONLY_BRANDS } from "@/lib/brands";
 
 interface BrandBadgeProps {
   /** Raw brand string from the data source (OSM, provider field…). */
@@ -18,10 +18,11 @@ export function BrandBadge({ brand, size = 32, className }: BrandBadgeProps) {
   if (!id) return null;
 
   const fallback = brandSvgDataUrl(id);
+  const src = LOCAL_ONLY_BRANDS.has(id) ? fallback : remoteBrandLogoUrl(id);
 
   return (
     <img
-      src={remoteBrandLogoUrl(id)}
+      src={src}
       alt={brand ?? ""}
       title={brand ?? ""}
       width={size}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchBrand } from "@/lib/brands";
+import { LOCAL_ONLY_BRANDS, matchBrand } from "@/lib/brands";
 
 describe("matchBrand", () => {
   it("matches aliases case- and accent-insensitively", () => {
@@ -28,5 +28,13 @@ describe("matchBrand", () => {
     expect(matchBrand("")).toBeUndefined();
     expect(matchBrand(undefined)).toBeUndefined();
     expect(matchBrand(null)).toBeUndefined();
+  });
+
+  it("identifies brands not indexed by Brandfetch as local-only", () => {
+    expect(LOCAL_ONLY_BRANDS.has("dyneff")).toBe(true);
+    expect(LOCAL_ONLY_BRANDS.has("elan")).toBe(true);
+    expect(LOCAL_ONLY_BRANDS.has("fulli")).toBe(true);
+    expect(LOCAL_ONLY_BRANDS.has("match")).toBe(true);
+    expect(LOCAL_ONLY_BRANDS.has("totalenergies")).toBe(false);
   });
 });

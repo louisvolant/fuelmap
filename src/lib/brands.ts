@@ -26,6 +26,17 @@ export type BrandId =
   | "totalenergies"
   | "u";
 
+/**
+ * Brands not indexed by Brandfetch (API 404).
+ * We serve their bundled vector marks directly without attempting remote fetches.
+ */
+export const LOCAL_ONLY_BRANDS: ReadonlySet<BrandId> = new Set([
+  "dyneff",
+  "elan",
+  "fulli",
+  "match",
+]);
+
 export interface BrandDefinition {
   id: BrandId;
   /** Human-readable name. */
