@@ -22,6 +22,7 @@ import {
   isResolutionFresh,
   type BrandResolution,
 } from "@/lib/brandResolutions";
+import { fetchBrandSnapshot } from "@/lib/brandSnapshot";
 import { enrichStationsWithBrands } from "@/lib/osmBrands";
 import { useAreaStationsStore } from "@/stores/areaStationsStore";
 import { useOsmStations } from "./useOsmStations";
@@ -138,22 +139,39 @@ export function useCountryStations(
     () => new Map(),
   );
 
-  // Load the persistent brand overlay once: logos render instantly, before any
-  // OpenStreetMap fetch for the current viewport resolves.
+  // Load the persistent brand overlay once: IndexedDB first (instant), then the
+  // precomputed Worker snapshot (covers areas this device never visited), so
+  // logos render before any live OpenStreetMap fetch resolves.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const cached = await getAllBrandResolutions();
+        const [cached, snapshot] = await Promise.all([
+          getAllBrandResolutions(),
+          needsEnrichment ? fetchBrandSnapshot().catch(() => null) : null,
+        ]);
         if (cancelled) return;
         const now = Date.now();
-        setResolutions(
-          new Map(
-            cached
-              .filter((resolution) => isResolutionFresh(resolution, now))
-              .map((resolution) => [resolution.stationId, resolution]),
-          ),
+        const merged = new Map<string, BrandResolution>();
+        for (const resolution of cached) {
+          if (isResolutionFresh(resolution, now)) {
+            merged.set(resolution.stationId, resolution);
+          }
+        }
+        // Snapshot wins when newer: it is the newest offline computation.
+        for (const resolution of snapshot ?? []) {
+          const existing = merged.get(resolution.stationId);
+          if (!existing || resolution.resolvedAt >= existing.resolvedAt) {
+            merged.set(resolution.stationId, resolution);
+          }
+        }
+        setResolutions(merged);
+        // Backfill IndexedDB so the snapshot works offline on next boot.
+        const missing = [...merged.values()].filter(
+          (resolution) =>
+            !cached.some((entry) => entry.stationId === resolution.stationId),
         );
+        if (missing.length > 0) void saveBrandResolutions(missing).catch(() => {});
       } catch {
         // Overlay is best-effort: OSM enrichment still works without it.
       }
@@ -161,6 +179,8 @@ export function useCountryStations(
     return () => {
       cancelled = true;
     };
+    // needsEnrichment is stable per country session; snapshot fetch runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const needsEnrichment = Boolean(definition.needsBrandEnrichment);

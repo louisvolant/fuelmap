@@ -208,3 +208,60 @@ describe("German stations proxy", () => {
     expect(body.message).toContain("not configured");
   });
 });
+
+describe("French brand snapshot", () => {
+  const MANIFEST_KEY = "brands-resolutions/v1/manifest.json";
+  const SNAPSHOT_KEY = "brands-resolutions/v1/snapshot.json";
+
+  it("answers an empty manifest when nothing is published", async () => {
+    const bucket = makeBucket();
+    const response = await worker.fetch(
+      new Request("https://fuelmap.example/api/fr/brands/manifest"),
+      makeEnv(bucket),
+      makeContext(),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ version: "v1", count: 0 });
+  });
+
+  it("answers 404 for a missing snapshot", async () => {
+    const bucket = makeBucket();
+    const response = await worker.fetch(
+      new Request("https://fuelmap.example/api/fr/brands/snapshot"),
+      makeEnv(bucket),
+      makeContext(),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("serves the published snapshot and caches it at the edge", async () => {
+    const bucket = makeBucket();
+    const payload = JSON.stringify({
+      version: "v1",
+      brands: { "FR:1": { brand: "TotalEnergies", lat: 48.85, lon: 2.35 } },
+    });
+    bucket.store.set(SNAPSHOT_KEY, { value: payload });
+    bucket.store.set(
+      MANIFEST_KEY,
+      { value: JSON.stringify({ version: "v1", count: 1 }) },
+    );
+    const context = makeContext();
+
+    const response = await worker.fetch(
+      new Request("https://fuelmap.example/api/fr/brands/snapshot"),
+      makeEnv(bucket),
+      context,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(JSON.parse(payload));
+    await Promise.all(context.pending);
+    expect(cachePut).toHaveBeenCalledTimes(1);
+
+    const manifest = await worker.fetch(
+      new Request("https://fuelmap.example/api/fr/brands/manifest"),
+      makeEnv(bucket),
+      makeContext(),
+    );
+    expect(await manifest.json()).toMatchObject({ count: 1 });
+  });
+});

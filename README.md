@@ -104,6 +104,12 @@ French government fuel-price open data.
   90-day overlay** (`brandResolutions` in IndexedDB, keyed by station id), so
   logos render instantly on revisit without waiting for a fresh OSM match, and
   small pans reuse the same OSM entry through a quantized tile key.
+  A **precomputed snapshot** (`GET /api/fr/brands/manifest` + `GET
+  /api/fr/brands/snapshot`, served from R2 and edge-cached for an hour) covers
+  areas this device never visited: the client hydrates its overlay from it on
+  boot (snapshot wins when newer), so first-time areas skip the Overpass wait
+  once a snapshot is published. An empty manifest (`count: 0`) simply falls
+  back to live OSM enrichment.
   Enrichment is encapsulated inside `useCountryStations`
   via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
   country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)

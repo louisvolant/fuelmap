@@ -417,6 +417,22 @@ const OSM_STATIONS_PATH = `/api/osm/v${OSM_CACHE_VERSION}/stations`;
 const OSM_LAST_GOOD_PREFIX = "osm-last-good/";
 
 /**
+ * Precomputed brand resolutions (`stationId -> brand`) for France.
+ *
+ * The live OSM enrichment stays as the fallback, but a first-time visitor to an
+ * area should not wait for Overpass: this snapshot is published offline (see
+ * `README.md`), served from R2, and hydrated by the client into its IndexedDB
+ * overlay on boot. Versioned so a bad publish can be rolled back by republishing
+ * the previous payload under a new version.
+ */
+const BRAND_SNAPSHOT_PREFIX = "brands-resolutions/";
+const BRAND_SNAPSHOT_VERSION = "v1";
+const BRAND_SNAPSHOT_MANIFEST_KEY = `${BRAND_SNAPSHOT_PREFIX}${BRAND_SNAPSHOT_VERSION}/manifest.json`;
+const BRAND_SNAPSHOT_KEY = `${BRAND_SNAPSHOT_PREFIX}${BRAND_SNAPSHOT_VERSION}/snapshot.json`;
+const BRAND_SNAPSHOT_CACHE_KEY = "https://fuelmap.internal/api/fr/brands/snapshot";
+const BRAND_SNAPSHOT_CACHE_TTL = 60 * 60;
+
+/**
  * Run an Overpass query against the mirrors until one answers.
  *
  * Returns `null` when **every** mirror failed, which is deliberately different
@@ -587,6 +603,62 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/**
+ * Precomputed French brand snapshot.
+ *
+ * - `GET /api/fr/brands/manifest` always answers 200: an empty manifest
+ *   (`count: 0`) when nothing was ever published, so the client simply falls
+ *   back to live OSM enrichment.
+ * - `GET /api/fr/brands/snapshot` answers the full `stationId -> brand` map,
+ *   edge-cached for an hour; 404 when unpublished.
+ */
+async function handleBrandSnapshot(
+  url: URL,
+  env: Env,
+  ctx: ExecutionContextLike,
+): Promise<Response> {
+  if (url.pathname === "/api/fr/brands/manifest") {
+    const stored = await env.BRANDS_BUCKET.get(BRAND_SNAPSHOT_MANIFEST_KEY);
+    if (!stored) {
+      return json({
+        version: BRAND_SNAPSHOT_VERSION,
+        resolverVersion: BRAND_SNAPSHOT_VERSION,
+        updatedAt: null,
+        count: 0,
+      });
+    }
+    return new Response(stored.body, {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "public, max-age=60",
+      },
+    });
+  }
+
+  if (url.pathname === "/api/fr/brands/snapshot") {
+    const cacheKey = new Request(BRAND_SNAPSHOT_CACHE_KEY, { method: "GET" });
+    const cached = await caches.default.match(cacheKey);
+    if (cached) return cached;
+
+    const stored = await env.BRANDS_BUCKET.get(BRAND_SNAPSHOT_KEY);
+    if (!stored) {
+      return json({ message: "brand snapshot not published" }, 404);
+    }
+    // Read once (the R2 body stream is single-use), then serve and cache.
+    const payload = JSON.stringify(await stored.json());
+    const headers = {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": `public, max-age=${BRAND_SNAPSHOT_CACHE_TTL}`,
+    };
+    ctx.waitUntil(
+      caches.default.put(cacheKey, new Response(payload, { headers })),
+    );
+    return new Response(payload, { headers });
+  }
+
+  return json({ message: "not found" }, 404);
+}
+
 async function handleGermanStations(url: URL, env: Env): Promise<Response> {
   const lat = url.searchParams.get("lat");
   const lng = url.searchParams.get("lng");
@@ -749,6 +821,13 @@ export default {
 
     if (url.pathname === "/api/geo") {
       return handleGeo(request);
+    }
+
+    if (
+      url.pathname === "/api/fr/brands/manifest" ||
+      url.pathname === "/api/fr/brands/snapshot"
+    ) {
+      return handleBrandSnapshot(url, env, ctx);
     }
 
     if (url.pathname.startsWith("/brands/")) {
