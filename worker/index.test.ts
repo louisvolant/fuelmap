@@ -29,7 +29,7 @@ function makeBucket() {
       return {
         body: new Response(entry.value).body,
         httpMetadata: { contentType: "application/json" },
-        customMetadata: {},
+        customMetadata: entry.options?.customMetadata ?? {},
         json: async () => JSON.parse(entry.value),
       };
     },
@@ -188,6 +188,25 @@ describe("GET /api/osm/v3/stations", () => {
       ],
     });
     expect(cachePut).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("brand logo assets", () => {
+  it("serves snapshots CORS-open for canvas normalization", async () => {
+    const bucket = makeBucket();
+    bucket.store.set("brands-logo/bp", {
+      value: "fake-bytes",
+      options: {
+        customMetadata: { verified: "1", refreshedAt: String(Date.now()) },
+      },
+    });
+    const response = await worker.fetch(
+      new Request("https://fuelmap.example/brands/bp"),
+      makeEnv(bucket),
+      makeContext(),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
   });
 });
 

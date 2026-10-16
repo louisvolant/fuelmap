@@ -103,7 +103,8 @@ describe("StationDetails", () => {
     );
 
     const badge = screen.getByRole("img", { name: "Total" });
-    expect(badge.getAttribute("src")).toContain("/brands/totalenergies");
+    // Bundled mark first; the normalized snapshot upgrades it when it loads.
+    expect(badge.getAttribute("src") ?? "").toContain("data:image/svg+xml");
   });
 
   it("omits the badge when the brand is unknown", () => {

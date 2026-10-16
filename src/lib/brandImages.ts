@@ -306,6 +306,75 @@ export async function preloadAllBrandImages(): Promise<void> {
   );
 }
 
+function loadCorsImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    image.src = src;
+  });
+}
+
+/**
+ * Normalize a remote logo for an `<img>` badge: same pipeline as the map
+ * markers (flat-background keying, shrink-to-fit, circular mask), encoded back
+ * to a PNG data URL. Returns `null` when anything fails — callers keep the
+ * bundled mark. Needs CORS-open assets (see `brandAssetHeaders` server-side).
+ */
+export async function normalizeLogoForBadge(
+  src: string,
+  size = 96,
+): Promise<string | null> {
+  try {
+    const image = await loadCorsImage(src);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+
+    const width = image.naturalWidth || size;
+    const height = image.naturalHeight || size;
+    const box = size * LOGO_FIT;
+    const scale = Math.min(box / width, box / height);
+    const drawWidth = width * scale;
+    const drawHeight = height * scale;
+    context.drawImage(
+      image,
+      (size - drawWidth) / 2,
+      (size - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
+    const pixels = context.getImageData(0, 0, size, size);
+    keyLogoBackground(pixels);
+    if (artworkReach(pixels) > ARTWORK_REACH) {
+      // Square artwork: redraw smaller instead of shaving it (same rule as
+      // the markers, single pass is enough for a badge).
+      const shrink = ARTWORK_REACH / artworkReach(pixels);
+      context.clearRect(0, 0, size, size);
+      context.drawImage(
+        image,
+        (size - drawWidth * shrink) / 2,
+        (size - drawHeight * shrink) / 2,
+        drawWidth * shrink,
+        drawHeight * shrink,
+      );
+      const redrawn = context.getImageData(0, 0, size, size);
+      keyLogoBackground(redrawn);
+      maskLogoToCircle(redrawn);
+      context.putImageData(redrawn, 0, 0);
+    } else {
+      maskLogoToCircle(pixels);
+      context.putImageData(pixels, 0, 0);
+    }
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Register the logos of the given brands as MapLibre images.
  * Idempotent and fire-and-forget friendly: a failure never breaks markers.

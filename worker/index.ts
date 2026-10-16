@@ -314,10 +314,22 @@ async function handleBrandAsset(
 
   return new Response(object.body, {
     headers: {
-      "content-type": object.httpMetadata?.contentType ?? "image/svg+xml",
-      "cache-control": "public, max-age=86400, stale-while-revalidate=2592000",
+      ...brandAssetHeaders(object.httpMetadata?.contentType ?? "image/svg+xml"),
     },
   });
+}
+
+/**
+ * Public logo assets: cacheable, and CORS-open so the client can normalize
+ * them through a canvas (background keying for the details badge) without
+ * tainting it. Logos are public trademarks served for identification.
+ */
+function brandAssetHeaders(contentType: string): Record<string, string> {
+  return {
+    "content-type": contentType,
+    "cache-control": "public, max-age=86400, stale-while-revalidate=2592000",
+    "access-control-allow-origin": "*",
+  };
 }
 
 /** Cloudflare geography attached to an incoming request. */
