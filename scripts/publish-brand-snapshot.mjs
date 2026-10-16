@@ -228,6 +228,21 @@ export function loadCheckpoint(outDir) {
         .filter(Boolean)
         .map((line) => JSON.parse(line))
     : [];
+  // Dedupe by OSM key: a tile refetched after an interruption (killed before
+  // its `done` entry was saved) would otherwise brand two stations at once.
+  {
+    const seenKeys = new Set();
+    const unique = [];
+    for (const node of nodes) {
+      if (node.key) {
+        if (seenKeys.has(node.key)) continue;
+        seenKeys.add(node.key);
+      }
+      unique.push(node);
+    }
+    nodes.length = 0;
+    nodes.push(...unique);
+  }
   return { stations, done, nodes };
 }
 
@@ -373,7 +388,15 @@ async function main() {
     `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel, ${skipped} empty skipped)…`,
   );
   const failedTiles = [];
-  let completed = 0;
+  let visited = 0;
+  const onShutdown = () => {
+    // Ctrl+C keeps everything fetched so far: --resume picks up here.
+    saveDoneCheckpoint(outDir, done);
+    console.log(`\ncheckpoint saved (${done.size} tiles done), rerun with --resume`);
+    process.exit(130);
+  };
+  process.once("SIGINT", onShutdown);
+  process.once("SIGTERM", onShutdown);
   await runTileQueue(
     pending,
     (tile) => queryOverpass(tile, { timeoutMs }),
@@ -389,15 +412,20 @@ async function main() {
           saveDoneCheckpoint(outDir, done);
         }
       }
-      completed += 1;
-      if (completed % 25 === 0) {
-        console.log(`…${completed}/${pending.length} tiles`);
+      visited += 1;
+      if (visited % 25 === 0) {
+        const ok = done.size;
+        console.log(
+          `…${visited}/${pending.length} visited (${ok} ok, ${failedTiles.length} failed)`,
+        );
       }
     },
     jobs,
   );
   failedTiles.sort((a, b) => a - b);
   saveDoneCheckpoint(outDir, done);
+  process.off("SIGINT", onShutdown);
+  process.off("SIGTERM", onShutdown);
 
   console.log(`…${nodes.length} OSM nodes, ${failedTiles.length} failed tiles`);
 

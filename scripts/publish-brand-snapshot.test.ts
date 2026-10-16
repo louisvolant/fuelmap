@@ -185,5 +185,11 @@ describe("publish-brand-snapshot", () => {
     expect(checkpoint?.stations).toEqual(stations);
     expect(checkpoint?.nodes).toEqual([{ key: "node/1", brand: "Total" }]);
     expect(checkpoint?.done).toEqual(new Set([0, 2]));
+
+    // A tile refetched after a kill is appended twice: load dedupes by key.
+    appendTileNodes(outDir, [{ key: "node/1", brand: "Total" }]);
+    expect(loadCheckpoint(outDir)?.nodes).toEqual([
+      { key: "node/1", brand: "Total" },
+    ]);
   });
 });
