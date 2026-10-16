@@ -53,3 +53,46 @@ export async function mockBrandLogoMissing(page: Page): Promise<void> {
     }),
   );
 }
+
+export interface BrandSnapshotFixture {
+  brand: string;
+  lat: number;
+  lon: number;
+  osmKey?: string;
+}
+
+/**
+ * Intercept the precomputed French brand snapshot: the manifest advertises the
+ * payload, the snapshot maps station ids to brands. Specs that need live OSM
+ * enrichment instead use `mockBrandSnapshotMissing`.
+ */
+export async function mockBrandSnapshot(
+  page: Page,
+  brands: Record<string, BrandSnapshotFixture>,
+): Promise<void> {
+  await page.route(/\/api\/fr\/brands\/manifest/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ version: "v1", count: Object.keys(brands).length }),
+    }),
+  );
+  await page.route(/\/api\/fr\/brands\/snapshot/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ version: "v1", brands }),
+    }),
+  );
+}
+
+/** No published snapshot: the client falls back to live OSM enrichment. */
+export async function mockBrandSnapshotMissing(page: Page): Promise<void> {
+  await page.route(/\/api\/fr\/brands\/manifest/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ version: "v1", count: 0 }),
+    }),
+  );
+}
