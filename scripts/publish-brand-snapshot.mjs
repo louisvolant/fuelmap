@@ -14,7 +14,9 @@
 // `--out` (`stations.json`, `nodes.jsonl`, `tiles-done.json`): rerun the exact
 // same command with `--resume` to fetch only the missing tiles. Tiles run
 // `--jobs`-parallel (default 6), empty tiles are skipped, and hung mirrors
-// fail fast (`--timeout-ms`, default 60 s) instead of stalling the crawl.
+// fail fast (`--timeout-ms`, default 30 s) instead of stalling the crawl.
+// Keep it above the 25 s server budget below: a lower value would kill healthy
+// slow answers instead of only stuck mirrors.
 //
 // Safety rules (same as the Worker): an Overpass failure is never cached as an
 // empty result — without mirror data the script exits non-zero and writes
@@ -366,7 +368,7 @@ async function main() {
     .map((tile, index) => ({ tile, index }))
     .filter(({ tile, index }) => inhabited.has(tile) && !done.has(index));
   const jobs = Math.max(1, Number(args.jobs ?? 6));
-  const timeoutMs = Number(args["timeout-ms"] ?? 60_000);
+  const timeoutMs = Number(args["timeout-ms"] ?? 30_000);
   console.log(
     `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel, ${skipped} empty skipped)…`,
   );
