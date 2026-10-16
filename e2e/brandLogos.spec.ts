@@ -63,8 +63,11 @@ test("shows the brand badge in the station details", async ({ page }) => {
   await focusParis(page);
   await clickStation(page, "FR:75101001");
 
-  await expect(page.getByRole("dialog").getByRole("img")).toHaveAttribute(
-    "src",
-    /\/brands\/totalenergies$/,
-  );
+  // Bundled mark first, then the snapshot normalized through the logo
+  // pipeline (never a raw JPEG that would render as a grey disc).
+  const badge = page.getByRole("dialog").getByRole("img");
+  await expect(badge).toHaveAttribute("src", /data:image\/svg\+xml/);
+  await expect
+    .poll(() => badge.getAttribute("src"))
+    .toMatch(/^data:image\/png/);
 });

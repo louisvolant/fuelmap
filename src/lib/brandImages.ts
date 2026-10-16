@@ -25,6 +25,8 @@ const LOGO_SIZE = 64;
 const LOGO_FIT = 0.88;
 
 const imageDataCache = new Map<BrandId, ImageData>();
+/** In-flight loads, shared so idle preload and marker registration never double-fetch. */
+const loadingPromises = new Map<BrandId, Promise<ImageData>>();
 
 /** The part of `ImageData` the logo styliser works on. */
 export interface PixelBuffer {
@@ -261,22 +263,32 @@ function toImageData(image: HTMLImageElement): ImageData {
 async function loadBrandLogo(id: BrandId): Promise<ImageData> {
   const cached = imageDataCache.get(id);
   if (cached) return cached;
+  const pending = loadingPromises.get(id);
+  if (pending) return pending;
 
-  let image: HTMLImageElement | undefined;
-  if (!LOCAL_ONLY_BRANDS.has(id)) {
-    try {
-      image = await loadImage(remoteBrandLogoUrl(id));
-    } catch {
-      image = undefined;
+  const loading = (async () => {
+    let image: HTMLImageElement | undefined;
+    if (!LOCAL_ONLY_BRANDS.has(id)) {
+      try {
+        image = await loadImage(remoteBrandLogoUrl(id));
+      } catch {
+        image = undefined;
+      }
     }
-  }
-  if (!image) {
-    image = await loadImage(brandSvgDataUrl(id));
-  }
+    if (!image) {
+      image = await loadImage(brandSvgDataUrl(id));
+    }
 
-  const imageData = toSquareImageData(image);
-  imageDataCache.set(id, imageData);
-  return imageData;
+    const imageData = toSquareImageData(image);
+    imageDataCache.set(id, imageData);
+    return imageData;
+  })();
+  loadingPromises.set(id, loading);
+  try {
+    return await loading;
+  } finally {
+    loadingPromises.delete(id);
+  }
 }
 
 /** Whether the rasterized pixels of a brand are already cached. */
@@ -288,17 +300,17 @@ export function isBrandImageCached(id: BrandId): boolean {
  * Warm the rasterized pixels of every bundled brand mark while the browser is
  * idle. Brand overlays apply instantly, but the logo still needs its pixels
  * before MapLibre can draw it — preloading moves that work off the critical
- * path so a newly branded bubble never flashes its price first. Best-effort
- * and offline-safe: bundled SVGs only, failures are ignored.
+ * path so a newly branded bubble never flashes its price first.
+ *
+ * Remote-first like the markers themselves (so R2 snapshots keep being
+ * preferred and self-heal), bundled fallback when offline or missing.
  */
 export async function preloadAllBrandImages(): Promise<void> {
   const ids = Object.keys(BRAND_SVGS) as BrandId[];
   await Promise.all(
     ids.map(async (id) => {
-      if (imageDataCache.has(id)) return;
       try {
-        const image = await loadImage(brandSvgDataUrl(id));
-        imageDataCache.set(id, toSquareImageData(image));
+        await loadBrandLogo(id);
       } catch {
         // Best-effort: the mark loads on demand later.
       }
