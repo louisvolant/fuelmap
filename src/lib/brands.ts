@@ -8,6 +8,7 @@
  * `aliases` are used to map raw provider/OSM brand strings onto a canonical id.
  */
 export type BrandId =
+  | "aral"
   | "auchan"
   | "avia"
   | "bp"
@@ -18,11 +19,15 @@ export type BrandId =
   | "eni"
   | "esso"
   | "fulli"
+  | "hem"
   | "intermarche"
+  | "jet"
   | "leclerc"
   | "match"
   | "netto"
+  | "orlen"
   | "shell"
+  | "star"
   | "totalenergies"
   | "u";
 
@@ -49,7 +54,7 @@ export const BRANDS: BrandDefinition[] = [
   {
     id: "totalenergies",
     label: "TotalEnergies",
-    aliases: ["Total", "TotalEnergies", "Total Energies", "Total Access", "TotalEnergies Access"],
+    aliases: ["Total", "TotalEnergies", "Total Energies", "Total Access", "TotalEnergies Access", "Total Relais", "Elf", "Fina"],
   },
   { id: "esso", label: "Esso", aliases: ["Esso", "Esso Express", "Esso Station"] },
   {
@@ -83,6 +88,11 @@ export const BRANDS: BrandDefinition[] = [
   { id: "match", label: "Supermarché Match", aliases: ["Match", "Supermarché Match", "Supermarche Match"] },
   { id: "cora", label: "Cora", aliases: ["Cora", "Cora Station"] },
   { id: "bp", label: "BP", aliases: ["BP", "BP Express", "British Petroleum"] },
+  { id: "aral", label: "Aral", aliases: ["Aral", "Aral Tankstelle", "Aral Station"] },
+  { id: "jet", label: "JET", aliases: ["JET", "Jet Tankstelle", "Jet Station"] },
+  { id: "star", label: "STAR", aliases: ["STAR", "Star Tankstelle", "Star Station"] },
+  { id: "orlen", label: "Orlen", aliases: ["Orlen", "ORLEN Station", "Orlen Tankstelle"] },
+  { id: "hem", label: "HEM", aliases: ["HEM", "HEM Tankstelle", "HEM Station"] },
 ];
 
 /** Normalize a brand string for matching: accents, case and punctuation. */

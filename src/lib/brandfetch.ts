@@ -17,7 +17,7 @@ export const BRANDFETCH_DOMAINS: Record<BrandId, string> = {
   esso: "esso.com",
   leclerc: "e.leclerc",
   carrefour: "carrefour.com",
-  avia: "avia.com", // verify
+  avia: "avia-international.com", // verified: avia.com is an unrelated shoe brand
   u: "magasins-u.com",
   intermarche: "intermarche.com",
   netto: "netto.fr", // verify (Netto also exists in DE/DK)
@@ -30,6 +30,11 @@ export const BRANDFETCH_DOMAINS: Record<BrandId, string> = {
   match: "match.fr", // verify: no Brandfetch brand
   cora: "cora.fr", // verify (Cora exists in several countries)
   bp: "bp.com",
+  aral: "aral.de", // verify
+  jet: "jet-tankstellen.de", // verify
+  star: "star-tankstellen.de", // verify
+  orlen: "orlen.pl", // verify
+  hem: "hem-tankstelle.de", // verify
 };
 
 export interface BrandfetchLogoFormat {

@@ -24,9 +24,10 @@ French government fuel-price open data.
   Luxembourg only publish a regulated **national maximum price**; Switzerland
   has station positions (OpenStreetMap) without prices.
 - 🏷️ **Brand mark on every bubble** — from zoom 12.5 each station is a round
-  white bubble with its brand mark (TotalEnergies, Esso, E.Leclerc, Carrefour,
-  Avia, Système U, Intermarché, Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan,
-  Match, Cora, BP). Whatever the source format, a logo is **normalised for the
+  white bubble with its brand mark (TotalEnergies — including Elf, Fina and
+  Total Relais — Esso, E.Leclerc, Carrefour, Avia, Système U, Intermarché,
+  Netto, Shell, Fulli, Auchan, Eni, Dyneff, Élan, Match, Cora, BP, plus the
+  German networks Aral, JET, STAR, Orlen and HEM). Whatever the source format, a logo is **normalised for the
   round bubble** before it is drawn: the flat white or grey background a JPEG
   carries is dropped, the bitmap is clipped to a disc, and an artwork that would
   reach past that circle is scaled down, so nothing is ever shaved and no square

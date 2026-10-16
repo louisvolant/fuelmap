@@ -1,5 +1,6 @@
 // Brand marks, embedded as raw SVG so they can be rasterized and registered as
 // MapLibre images. See `scripts/generate-brand-logos.mjs`.
+import aral from "@/assets/brands/aral.svg?raw";
 import auchan from "@/assets/brands/auchan.svg?raw";
 import avia from "@/assets/brands/avia.svg?raw";
 import bp from "@/assets/brands/bp.svg?raw";
@@ -10,16 +11,21 @@ import elan from "@/assets/brands/elan.svg?raw";
 import eni from "@/assets/brands/eni.svg?raw";
 import esso from "@/assets/brands/esso.svg?raw";
 import fulli from "@/assets/brands/fulli.svg?raw";
+import hem from "@/assets/brands/hem.svg?raw";
 import intermarche from "@/assets/brands/intermarche.svg?raw";
+import jet from "@/assets/brands/jet.svg?raw";
 import leclerc from "@/assets/brands/leclerc.svg?raw";
 import match from "@/assets/brands/match.svg?raw";
 import netto from "@/assets/brands/netto.svg?raw";
+import orlen from "@/assets/brands/orlen.svg?raw";
 import shell from "@/assets/brands/shell.svg?raw";
+import star from "@/assets/brands/star.svg?raw";
 import totalenergies from "@/assets/brands/totalenergies.svg?raw";
 import u from "@/assets/brands/u.svg?raw";
 import type { BrandId } from "./brands";
 
 export const BRAND_SVGS: Record<BrandId, string> = {
+  aral,
   auchan,
   avia,
   bp,
@@ -30,11 +36,15 @@ export const BRAND_SVGS: Record<BrandId, string> = {
   eni,
   esso,
   fulli,
+  hem,
   intermarche,
+  jet,
   leclerc,
   match,
   netto,
+  orlen,
   shell,
+  star,
   totalenergies,
   u,
 };

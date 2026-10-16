@@ -35,6 +35,22 @@ describe("matchBrand", () => {
     expect(matchBrand("U Express")).toBe("u");
   });
 
+  it("matches German provider brands", () => {
+    expect(matchBrand("Aral")).toBe("aral");
+    expect(matchBrand("ARAL Tankstelle Hamburg")).toBe("aral");
+    expect(matchBrand("JET")).toBe("jet");
+    expect(matchBrand("STAR Tankstelle")).toBe("star");
+    expect(matchBrand("Orlen")).toBe("orlen");
+    expect(matchBrand("HEM")).toBe("hem");
+  });
+
+  it("matches legacy TotalEnergies networks", () => {
+    expect(matchBrand("Elf")).toBe("totalenergies");
+    expect(matchBrand("Station Elf")).toBe("totalenergies");
+    expect(matchBrand("Fina")).toBe("totalenergies");
+    expect(matchBrand("Total Relais")).toBe("totalenergies");
+  });
+
   it("returns undefined for unknown brands", () => {
     expect(matchBrand("Random Station")).toBeUndefined();
     expect(matchBrand("")).toBeUndefined();
