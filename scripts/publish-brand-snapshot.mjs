@@ -290,6 +290,23 @@ export async function queryOverpass(
   return null;
 }
 
+/**
+ * Fetch pending tiles with a small worker pool. `jobs` defaults to 3: the
+ * public mirrors are saturated, so politeness beats raw speed — and every
+ * failure already backs off exponentially inside `queryOverpass`.
+ */
+export async function runTileQueue(pending, queryFn, onTile, jobs = 3) {
+  const queue = [...pending];
+  const workers = Array.from({ length: Math.max(1, jobs) }, async () => {
+    for (;;) {
+      const job = queue.shift();
+      if (!job) return;
+      await onTile(job.index, await queryFn(job.tile));
+    }
+  });
+  await Promise.all(workers);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const bbox = parseBbox(args.bbox, [-5, 41, 10, 51.5]);
@@ -324,29 +341,38 @@ async function main() {
   }
 
   const tiles = splitBbox(bbox, tileStep);
-  const remaining = tiles.filter((_, index) => !done.has(index));
-  console.log(`querying ${remaining.length}/${tiles.length} Overpass tiles…`);
+  const pending = tiles
+    .map((tile, index) => ({ tile, index }))
+    .filter(({ index }) => !done.has(index));
+  const jobs = Math.max(1, Number(args.jobs ?? 3));
+  console.log(
+    `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel)…`,
+  );
   const failedTiles = [];
-  let fetched = 0;
-  for (const [index, tile] of tiles.entries()) {
-    if (done.has(index)) continue;
-    const result = await queryOverpass(tile);
-    if (result === null) {
-      failedTiles.push(index);
-      console.warn(`tile ${index + 1}/${tiles.length}: mirrors down`);
-    } else {
-      appendTileNodes(outDir, result);
-      nodes.push(...result);
-      done.add(index);
-      fetched += 1;
-      if (fetched % 25 === 0) {
-        saveDoneCheckpoint(outDir, done);
+  let completed = 0;
+  await runTileQueue(
+    pending,
+    (tile) => queryOverpass(tile),
+    (index, result) => {
+      if (result === null) {
+        failedTiles.push(index);
+        console.warn(`tile ${index + 1}/${tiles.length}: mirrors down`);
+      } else {
+        appendTileNodes(outDir, result);
+        nodes.push(...result);
+        done.add(index);
+        if (done.size % 25 === 0) {
+          saveDoneCheckpoint(outDir, done);
+        }
       }
-    }
-    if ((done.size + failedTiles.length) % 25 === 0) {
-      console.log(`…${done.size + failedTiles.length}/${tiles.length} tiles`);
-    }
-  }
+      completed += 1;
+      if (completed % 25 === 0) {
+        console.log(`…${completed}/${pending.length} tiles`);
+      }
+    },
+    jobs,
+  );
+  failedTiles.sort((a, b) => a - b);
   saveDoneCheckpoint(outDir, done);
 
   console.log(`…${nodes.length} OSM nodes, ${failedTiles.length} failed tiles`);

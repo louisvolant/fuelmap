@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   appendTileNodes,
+  runTileQueue,
   distanceMeters,
   fetchDgccrf,
   joinStations,
@@ -112,6 +113,30 @@ describe("publish-brand-snapshot", () => {
         rounds: 1,
       }),
     ).resolves.toBeNull();
+  });
+
+  it("fetches every tile exactly once, up to the job limit", async () => {
+    const pending = [0, 1, 2, 3, 4].map((index) => ({ tile: [index], index }));
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const seen = [];
+    await runTileQueue(
+      pending,
+      async (tile) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight -= 1;
+        return tile;
+      },
+      (index, result) => {
+        seen.push([index, result]);
+      },
+      2,
+    );
+    expect(seen.map(([index]) => index).sort()).toEqual([0, 1, 2, 3, 4]);
+    expect(maxInFlight).toBeLessThanOrEqual(2);
+    expect(maxInFlight).toBeGreaterThan(1);
   });
 
   it("round-trips a checkpoint so --resume skips done tiles", () => {
