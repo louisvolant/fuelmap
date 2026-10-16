@@ -164,7 +164,10 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 - The client tries `/brands/<id>` first and falls back to the bundled SVG (brands
   unindexed by Brandfetch like Dyneff, Élan, Fulli, Match serve their dedicated
   vector marks directly without attempting a remote fetch), so it never waits for
-  a third party and keeps working offline.
+  a third party and keeps working offline. Every bundled mark is also
+  pre-rasterized while the browser is idle (`preloadAllBrandImages`), so a
+  bubble that gains its brand from the overlay draws its logo immediately
+  instead of flashing its price first.
 - **Every logo is normalised for the round bubble** (`src/lib/brandImages.ts`).
   Brandfetch serves most brands as **JPEG**, which has no alpha channel, so a
   transparent logo comes back baked on a white (or light-grey) square whose

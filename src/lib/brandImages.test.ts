@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   artworkReach,
   keyLogoBackground,
@@ -108,5 +108,64 @@ describe("maskLogoToCircle", () => {
     expect(alphaAt(pixels, 15, 15)).toBe(0);
     expect(alphaAt(pixels, 8, 8)).toBe(255);
     expect(alphaAt(pixels, 0, 8)).toBeGreaterThan(200);
+  });
+});
+
+describe("preloadAllBrandImages", () => {
+  it("warms every bundled mark off the critical path", async () => {
+    const { preloadAllBrandImages, isBrandImageCached } = await import(
+      "./brandImages"
+    );
+    const { BRAND_SVGS } = await import("./brandSvgs");
+
+    // Fake image that "loads" instantly with a square bitmap.
+    const RealImage = globalThis.Image;
+    vi.stubGlobal(
+      "Image",
+      class {
+        naturalWidth = 64;
+        naturalHeight = 64;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_value: string) {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+    // Fake 2d context: solid disc, no background to key.
+    const createElement = document.createElement.bind(document);
+    const canvasStub = vi
+      .spyOn(document, "createElement")
+      .mockImplementation(((tag: string, ...rest: unknown[]) => {
+        if (tag !== "canvas") {
+          return (createElement as (...args: unknown[]) => unknown)(
+            tag,
+            ...rest,
+          ) as Element;
+        }
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => {},
+            clearRect: () => {},
+            getImageData: (width = 64, height = 64) => ({
+              data: new Uint8ClampedArray(width * height * 4).fill(255),
+              width,
+              height,
+            }),
+          }),
+        } as unknown as Element;
+      }) as unknown as typeof document.createElement);
+
+    try {
+      await preloadAllBrandImages();
+      for (const id of Object.keys(BRAND_SVGS)) {
+        expect(isBrandImageCached(id as never)).toBe(true);
+      }
+    } finally {
+      canvasStub.mockRestore();
+      vi.stubGlobal("Image", RealImage);
+    }
   });
 });

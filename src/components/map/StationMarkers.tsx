@@ -6,6 +6,7 @@ import {
   ensureBrandImages,
   ensureDefaultBrandImage,
   ensurePricePillImage,
+  preloadAllBrandImages,
   PRICE_PILL_IMAGE_ID,
 } from "@/lib/brandImages";
 import { matchBrand, type BrandId } from "@/lib/brands";
@@ -93,6 +94,22 @@ export function StationMarkers({
     brandIdsRef.current = ids;
     if (map && ids.size > 0) void ensureBrandImages(map, ids);
   }, [map, stations]);
+
+  // Warm every bundled mark while the browser is idle, so a bubble that gains
+  // its brand from the overlay never flashes its price first: the pixels are
+  // already cached when `ensureBrandImages` runs.
+  useEffect(() => {
+    if (!map) return;
+    const warm = () => {
+      void preloadAllBrandImages().catch(() => {});
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(warm, { timeout: 3000 });
+      return () => window.cancelIdleCallback?.(handle);
+    }
+    const timer = window.setTimeout(warm, 1000);
+    return () => window.clearTimeout(timer);
+  }, [map]);
 
   useEffect(() => {
     dataRef.current = data;

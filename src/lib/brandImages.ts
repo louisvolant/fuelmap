@@ -1,5 +1,6 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { brandSvgDataUrl, remoteBrandLogoUrl } from "./brandLogos";
+import { BRAND_SVGS } from "./brandSvgs";
 import { brandImageId, LOCAL_ONLY_BRANDS, type BrandId } from "./brands";
 
 /**
@@ -276,6 +277,33 @@ async function loadBrandLogo(id: BrandId): Promise<ImageData> {
   const imageData = toSquareImageData(image);
   imageDataCache.set(id, imageData);
   return imageData;
+}
+
+/** Whether the rasterized pixels of a brand are already cached. */
+export function isBrandImageCached(id: BrandId): boolean {
+  return imageDataCache.has(id);
+}
+
+/**
+ * Warm the rasterized pixels of every bundled brand mark while the browser is
+ * idle. Brand overlays apply instantly, but the logo still needs its pixels
+ * before MapLibre can draw it — preloading moves that work off the critical
+ * path so a newly branded bubble never flashes its price first. Best-effort
+ * and offline-safe: bundled SVGs only, failures are ignored.
+ */
+export async function preloadAllBrandImages(): Promise<void> {
+  const ids = Object.keys(BRAND_SVGS) as BrandId[];
+  await Promise.all(
+    ids.map(async (id) => {
+      if (imageDataCache.has(id)) return;
+      try {
+        const image = await loadImage(brandSvgDataUrl(id));
+        imageDataCache.set(id, toSquareImageData(image));
+      } catch {
+        // Best-effort: the mark loads on demand later.
+      }
+    }),
+  );
 }
 
 /**
