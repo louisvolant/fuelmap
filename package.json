@@ -16,6 +16,7 @@
     "e2e:ui": "playwright test --ui",
     "icons": "node scripts/generate-icons.mjs",
     "brands": "node scripts/generate-brand-logos.mjs",
+    "brands:snapshot": "node scripts/publish-brand-snapshot.mjs",
     "brands:check": "node scripts/check-brand-domains.mjs",
     "deploy": "npm run build && wrangler deploy"
   },

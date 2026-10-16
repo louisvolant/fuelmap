@@ -14,8 +14,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // Unit/component tests live next to the source; the Worker's live next to
-    // the Worker. End-to-end specs in `e2e/` are run by Playwright, not Vitest.
-    include: ["src/**/*.{test,spec}.{ts,tsx}", "worker/**/*.{test,spec}.ts"],
+    // the Worker; maintainer scripts are tested next to the script.
+    // End-to-end specs in `e2e/` are run by Playwright, not Vitest.
+    include: [
+      "src/**/*.{test,spec}.{ts,tsx}",
+      "worker/**/*.{test,spec}.ts",
+      "scripts/**/*.{test,spec}.ts",
+    ],
     css: false,
   },
 });

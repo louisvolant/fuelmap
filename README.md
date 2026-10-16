@@ -111,7 +111,11 @@ French government fuel-price open data.
   areas this device never visited: the client hydrates its overlay from it on
   boot (snapshot wins when newer), so first-time areas skip the Overpass wait
   once a snapshot is published. An empty manifest (`count: 0`) simply falls
-  back to live OSM enrichment.
+  back to live OSM enrichment. Publish it offline with
+  `npm run brands:snapshot -- --bbox <w,s,e,n> --out ./brand-snapshot` (full
+  France by default), then upload both files to
+  `brands-resolutions/v1/` in R2: the script refuses partial or empty results,
+  so a saturated Overpass can never poison it.
   Enrichment is encapsulated inside `useCountryStations`
   via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
   country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)
