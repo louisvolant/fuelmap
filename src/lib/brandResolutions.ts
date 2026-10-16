@@ -108,7 +108,7 @@ export function collectNewResolutions<
 >(
   before: T[],
   after: T[],
-  osmKeyByStationId: Map<string, string> = new Map(),
+  provenanceByStationId: Map<string, { osmKey?: string; distanceM?: number }> = new Map(),
   now = Date.now(),
 ): BrandResolution[] {
   const brandBefore = new Map(before.map((station) => [station.id, station.brand]));
@@ -116,12 +116,14 @@ export function collectNewResolutions<
   for (const station of after) {
     if (!station.brand) continue;
     if (brandBefore.get(station.id)) continue;
+    const provenance = provenanceByStationId.get(station.id);
     resolutions.push({
       stationId: station.id,
       brand: station.brand,
-      osmKey: osmKeyByStationId.get(station.id),
+      osmKey: provenance?.osmKey,
       lat: station.lat,
       lon: station.lon,
+      distanceM: provenance?.distanceM,
       resolvedAt: now,
       resolverVersion: BRAND_RESOLVER_VERSION,
     });

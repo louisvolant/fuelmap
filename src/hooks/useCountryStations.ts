@@ -20,10 +20,11 @@ import {
   applyBrandResolutions,
   collectNewResolutions,
   isResolutionFresh,
+  stableBboxKey,
   type BrandResolution,
 } from "@/lib/brandResolutions";
 import { fetchBrandSnapshot } from "@/lib/brandSnapshot";
-import { enrichStationsWithBrands } from "@/lib/osmBrands";
+import { enrichStationsWithBrandsDetailed } from "@/lib/osmBrands";
 import { useAreaStationsStore } from "@/stores/areaStationsStore";
 import { useOsmStations } from "./useOsmStations";
 
@@ -92,9 +93,7 @@ export function useAreaStations(
     (state) => state.byCountry[country] ?? EMPTY_STATIONS,
   );
 
-  const boundsKey = bounds
-    ? bounds.map((value) => value.toFixed(2)).join(",")
-    : null;
+  const boundsKey = bounds ? stableBboxKey(bounds) : null;
 
   const query = useQuery<NormalizedStation[]>({
     queryKey: ["stations-area", country, boundsKey],
@@ -199,18 +198,25 @@ export function useCountryStations(
     return applyBrandResolutions(rawStations, resolutions);
   }, [needsEnrichment, rawStations, resolutions]);
 
-  const stations = useMemo(() => {
+  const enriched = useMemo(() => {
     if (!needsEnrichment || !osm.data || osm.data.length === 0) {
-      return cachedStations;
+      return { stations: cachedStations, assignments: [] };
     }
-    return enrichStationsWithBrands(cachedStations, osm.data);
+    return enrichStationsWithBrandsDetailed(cachedStations, osm.data);
   }, [needsEnrichment, cachedStations, osm.data]);
+  const { stations, assignments } = enriched;
 
   // Persist newly enriched brands so the next visit skips the OSM wait. The
   // in-memory overlay syncs after the IndexedDB write (async fetch pattern).
   useEffect(() => {
     if (!needsEnrichment || stations.length === 0) return;
-    const fresh = collectNewResolutions(cachedStations, stations);
+    const provenance = new Map(
+      assignments.map((assignment) => [
+        assignment.stationId,
+        { osmKey: assignment.osmKey, distanceM: assignment.distanceM },
+      ]),
+    );
+    const fresh = collectNewResolutions(cachedStations, stations, provenance);
     if (fresh.length === 0) return;
     void (async () => {
       try {
@@ -224,7 +230,7 @@ export function useCountryStations(
         return next;
       });
     })();
-  }, [needsEnrichment, cachedStations, stations]);
+  }, [needsEnrichment, cachedStations, stations, assignments]);
 
   if (source?.kind === "area") {
     return {

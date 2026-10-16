@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedStation } from "@/countries/types";
-import { enrichStationsWithBrands } from "@/lib/osmBrands";
+import {
+  enrichStationsWithBrands,
+  enrichStationsWithBrandsDetailed,
+} from "@/lib/osmBrands";
 import type { OsmFuelStation } from "@/lib/osmStations";
 
 function station(
@@ -73,5 +76,20 @@ describe("enrichStationsWithBrands", () => {
     expect(
       enrichStationsWithBrands(stations, [node("node/1", 2.3522, 48.8566)]),
     ).toBe(stations);
+  });
+
+  it("reports provenance for every match", () => {
+    const stations = [station("a", 2.3522, 48.8566)];
+    const nodes = [node("node/7", 2.35221, 48.85661, "Total")];
+    const { stations: enriched, assignments } =
+      enrichStationsWithBrandsDetailed(stations, nodes);
+    expect(enriched[0].brand).toBe("Total");
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0]).toMatchObject({
+      stationId: "a",
+      osmKey: "node/7",
+    });
+    expect(assignments[0].distanceM).toBeGreaterThanOrEqual(0);
+    expect(assignments[0].distanceM).toBeLessThanOrEqual(120);
   });
 });

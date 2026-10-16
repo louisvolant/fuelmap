@@ -97,4 +97,19 @@ describe("brandResolutions", () => {
     expect(reloaded[0].brand).toBe("TotalEnergies");
     expect(reloaded[1].brand).toBeUndefined();
   });
+
+  it("keeps match provenance for the overlay", () => {
+    const fresh: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: undefined, lat: 48.85, lon: 2.35 },
+    ];
+    const enriched: { id: string; brand?: string; lat: number; lon: number }[] = [
+      { id: "FR:1", brand: "TotalEnergies", lat: 48.85, lon: 2.35 },
+    ];
+    const saved = collectNewResolutions(
+      fresh,
+      enriched,
+      new Map([["FR:1", { osmKey: "node/7", distanceM: 12 }]]),
+    );
+    expect(saved[0]).toMatchObject({ osmKey: "node/7", distanceM: 12 });
+  });
 });

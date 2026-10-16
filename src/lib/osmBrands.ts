@@ -21,8 +21,31 @@ export function enrichStationsWithBrands(
   nodes: OsmFuelStation[],
   maxDistanceMeters = 120,
 ): NormalizedStation[] {
+  return enrichStationsWithBrandsDetailed(stations, nodes, maxDistanceMeters)
+    .stations;
+}
+
+/** Provenance of a single brand match, persisted in the overlay. */
+export interface BrandAssignment {
+  stationId: string;
+  /** OSM node that provided the brand, e.g. `"node/123"`. */
+  osmKey: string;
+  /** Distance (meters) between the official and OSM positions. */
+  distanceM: number;
+}
+
+/**
+ * Same match as `enrichStationsWithBrands`, plus per-station provenance so the
+ * persistent overlay can record which OSM node branded what and how far apart
+ * they were.
+ */
+export function enrichStationsWithBrandsDetailed(
+  stations: NormalizedStation[],
+  nodes: OsmFuelStation[],
+  maxDistanceMeters = 120,
+): { stations: NormalizedStation[]; assignments: BrandAssignment[] } {
   const candidates = branded(nodes);
-  if (candidates.length === 0) return stations;
+  if (candidates.length === 0) return { stations, assignments: [] };
 
   const result = stations.map((station) => ({ ...station }));
 
@@ -53,12 +76,18 @@ export function enrichStationsWithBrands(
 
   const usedNodes = new Set<number>();
   const brandedStations = new Set<string>();
-  for (const { station, index } of pairs) {
+  const assignments: BrandAssignment[] = [];
+  for (const { station, index, distance } of pairs) {
     if (usedNodes.has(index) || brandedStations.has(station.id)) continue;
     station.brand = candidates[index].brand;
     usedNodes.add(index);
     brandedStations.add(station.id);
+    assignments.push({
+      stationId: station.id,
+      osmKey: candidates[index].key,
+      distanceM: distance,
+    });
   }
 
-  return result;
+  return { stations: result, assignments };
 }
