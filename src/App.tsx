@@ -11,7 +11,6 @@ import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { ZoomLevelBadge } from "@/components/map/ZoomLevelBadge";
 import { MapContext } from "@/components/map/MapContext";
-import { MapStyleSwitcher } from "@/components/map/MapStyleSwitcher";
 import { StationMarkers } from "@/components/map/StationMarkers";
 import { StationsStatus } from "@/components/map/StationsStatus";
 import { UserLocationLayer } from "@/components/map/UserLocationLayer";
@@ -239,7 +238,6 @@ export default function App() {
             />
             <SettingsButton />
           </div>
-          <MapStyleSwitcher />
           <RoutePanel />
           <MaxPriceBanner />
         </div>

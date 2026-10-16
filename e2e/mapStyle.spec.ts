@@ -27,6 +27,8 @@ test.describe("basemap style switcher", () => {
     page,
   }) => {
     await focusParis(page);
+    await page.getByRole("button", { name: "Réglages" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
 
     const before = await page.evaluate(() => {
       const map = (window as unknown as { __fuelmapMap: TestMap }).__fuelmapMap;

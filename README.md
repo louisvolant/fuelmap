@@ -224,7 +224,7 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 
 - **[OpenFreeMap](https://openfreemap.org/)** — free, unlimited vector tiles from
   OpenStreetMap data, no registration or API key.
-- Four styles are available from a picker on the map: **Liberty** (default,
+- Four styles are available from the settings (gear icon): **Liberty** (default,
   colourful), **Bright**, **Positron** (monochrome) and **Dark**, plus an
   **Auto** mode that follows the UI theme. The choice is persisted. Switching
   uses `map.setStyle()`; the app's sources, layers and brand images are

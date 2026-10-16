@@ -3,6 +3,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { CountrySwitcher } from "./CountrySwitcher";
 import { HistoryLink } from "./HistoryLink";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { MapStyleSwitcher } from "./MapStyleSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
 interface SettingsSheetProps {
@@ -10,7 +11,7 @@ interface SettingsSheetProps {
   onClose: () => void;
 }
 
-/** Settings sheet: country, language and theme. */
+/** Settings sheet: country, theme, basemap style and language. */
 export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const { t } = useTranslation();
 
@@ -24,6 +25,10 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t("settings.theme")}</h3>
           <ThemeSwitcher />
+        </section>
+        <section>
+          <h3 className="mb-2 text-sm font-semibold">{t("map.style")}</h3>
+          <MapStyleSwitcher />
         </section>
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t("common.language")}</h3>
