@@ -84,7 +84,15 @@ describe("publish-brand-snapshot", () => {
     expect(toManifestPayload(matches, 1000)).toMatchObject({
       version: "v1",
       count: 1,
+      partial: false,
     });
+    expect(
+      toManifestPayload(matches, 1000, {
+        partial: true,
+        tilesDone: 600,
+        tilesTotal: 630,
+      }),
+    ).toMatchObject({ partial: true, tilesDone: 600, tilesTotal: 630 });
   });
 
   it("fetches DGCCRF coordinates page by page", async () => {

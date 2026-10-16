@@ -18,6 +18,10 @@
 // Keep it above the 25 s server budget below: a lower value would kill healthy
 // slow answers instead of only stuck mirrors.
 //
+// Coverage over completeness: `--allow-partial` publishes the tiles fetched so
+// far (manifest carries `partial: true` plus tile counts). Missing areas keep
+// using live OSM enrichment, so a partial snapshot strictly improves things.
+//
 // Safety rules (same as the Worker): an Overpass failure is never cached as an
 // empty result — without mirror data the script exits non-zero and writes
 // nothing. Use `--allow-empty` only to deliberately publish an empty area.
@@ -152,12 +156,14 @@ export function toSnapshotPayload(matches, now = Date.now()) {
   return { version: VERSION, updatedAt: now, brands };
 }
 
-export function toManifestPayload(matches, now = Date.now()) {
+export function toManifestPayload(matches, now = Date.now(), coverage = {}) {
   return {
     version: VERSION,
     resolverVersion: VERSION,
     updatedAt: now,
     count: matches.length,
+    partial: Boolean(coverage.partial),
+    ...coverage,
   };
 }
 
@@ -429,17 +435,23 @@ async function main() {
 
   console.log(`…${nodes.length} OSM nodes, ${failedTiles.length} failed tiles`);
 
-  if (failedTiles.length > 0) {
+  if (failedTiles.length > 0 && !args["allow-partial"]) {
     console.error(
       `refusing to publish: ${failedTiles.length} tile(s) missed Overpass data (a partial snapshot would drop brands)`,
     );
-    console.error(`rerun with the same --out plus --resume to fill the gaps:`);
+    console.error(`rerun with the same --out plus --resume to fill the gaps,`);
+    console.error(`or publish what succeeded with --allow-partial:`);
     for (const index of failedTiles) {
       console.error(`  tile ${index + 1}: ${tiles[index].join(",")}`);
     }
     process.exitCode = 1;
     return;
   }
+  const coverage = {
+    partial: failedTiles.length > 0,
+    tilesDone: done.size,
+    tilesTotal: tiles.length,
+  };
 
   const matches = joinStations(stations, nodes);
   console.log(`…${matches.length} brand matches`);
@@ -457,8 +469,13 @@ async function main() {
   );
   writeFileSync(
     resolve(outDir, "manifest.json"),
-    JSON.stringify(toManifestPayload(matches, now)),
+    JSON.stringify(toManifestPayload(matches, now, coverage)),
   );
+  if (failedTiles.length > 0) {
+    console.log(
+      `partial snapshot: ${done.size}/${tiles.length} tiles (${matches.length} brands) — rerun with --resume to complete it`,
+    );
+  }
   console.log(`wrote ${outDir}/snapshot.json + manifest.json`);
   console.log("upload with:");
   console.log(

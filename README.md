@@ -119,6 +119,9 @@ French government fuel-price open data.
   so a saturated Overpass can never poison it. Progress is checkpointed per
   tile — rerun the same command with `--resume` to fetch only the missing
   tiles (parallel `--jobs`, empty tiles skipped, 30 s hung-mirror timeout).
+  With `--allow-partial`, tiles fetched so far are published right away
+  (`partial: true` in the manifest) — missing areas keep the live OSM path,
+  so partial coverage strictly helps.
   Enrichment is encapsulated inside `useCountryStations`
   via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
   country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)
