@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   appendTileNodes,
   runTileQueue,
+  tilesWithStations,
   distanceMeters,
   fetchDgccrf,
   joinStations,
@@ -137,6 +138,37 @@ describe("publish-brand-snapshot", () => {
     expect(seen.map(([index]) => index).sort()).toEqual([0, 1, 2, 3, 4]);
     expect(maxInFlight).toBeLessThanOrEqual(2);
     expect(maxInFlight).toBeGreaterThan(1);
+  });
+
+  it("fails hung mirrors fast instead of stalling", async () => {
+    // Hangs like a saturated mirror, but honors aborts like a real fetch.
+    const hanging = vi.fn(
+      (_url: unknown, init?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    ) as unknown as typeof fetch;
+    const started = Date.now();
+    await expect(
+      queryOverpass([2.4, 48.8, 2.5, 48.9], {
+        fetchImpl: hanging,
+        rounds: 1,
+        timeoutMs: 50,
+      }),
+    ).resolves.toBeNull();
+    // 1 round x 3 mirrors x 50 ms + single 0 s trailing sleep.
+    expect(Date.now() - started).toBeLessThan(5000);
+  });
+
+  it("skips tiles holding no station", () => {
+    const tiles = [
+      [0, 0, 0.5, 0.5],
+      [10, 10, 10.5, 10.5],
+    ];
+    const stations = [{ id: "FR:1", lat: 0.1, lon: 0.1 }];
+    expect(tilesWithStations(tiles, stations)).toEqual([[0, 0, 0.5, 0.5]]);
   });
 
   it("round-trips a checkpoint so --resume skips done tiles", () => {

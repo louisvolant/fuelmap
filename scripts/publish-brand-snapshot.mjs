@@ -12,7 +12,9 @@
 //
 // When Overpass saturates mid-crawl, progress is checkpointed per tile in
 // `--out` (`stations.json`, `nodes.jsonl`, `tiles-done.json`): rerun the exact
-// same command with `--resume` to fetch only the missing tiles.
+// same command with `--resume` to fetch only the missing tiles. Tiles run
+// `--jobs`-parallel (default 6), empty tiles are skipped, and hung mirrors
+// fail fast (`--timeout-ms`, default 60 s) instead of stalling the crawl.
 //
 // Safety rules (same as the Worker): an Overpass failure is never cached as an
 // empty result — without mirror data the script exits non-zero and writes
@@ -247,13 +249,15 @@ export function saveDoneCheckpoint(outDir, done) {
 /** Query Overpass mirrors in order, with exponential backoff between rounds. */
 export async function queryOverpass(
   tile,
-  { fetchImpl = fetch, rounds = 3 } = {},
+  { fetchImpl = fetch, rounds = 3, timeoutMs = 60_000 } = {},
 ) {
   const [west, south, east, north] = tile;
   const query = `[out:json][timeout:25];nwr["amenity"="fuel"](${south},${west},${north},${east});out center tags;`;
   for (let round = 0; round < rounds; round += 1) {
     for (const mirror of OSM_MIRRORS) {
       try {
+        // Fail fast on hung mirrors: a saturated mirror holds the connection
+        // for minutes, which used to stall the whole crawl.
         const response = await fetchImpl(mirror, {
           method: "POST",
           headers: {
@@ -262,6 +266,7 @@ export async function queryOverpass(
             "user-agent": "FuelMap/1.0 (+https://github.com/louisvolant/fuelmap)",
           },
           body: new URLSearchParams({ data: query }).toString(),
+          signal: AbortSignal.timeout(timeoutMs),
         });
         if (!response.ok) continue;
         const payload = await response.json();
@@ -282,12 +287,26 @@ export async function queryOverpass(
           });
         }
       } catch {
-        // Try the next mirror.
+        // Try the next mirror (timeout, reset, 5xx…).
       }
     }
-    await sleep(2 ** round * 1000);
+    if (round < rounds - 1) await sleep(2 ** round * 1000);
   }
   return null;
+}
+
+/**
+ * Keep only tiles holding at least one station: seas, mountains and empty
+ * countryside need no Overpass query. Indexes are preserved so existing
+ * `--resume` checkpoints stay valid.
+ */
+export function tilesWithStations(tiles, stations) {
+  return tiles.filter((tile) => {
+    const [west, south, east, north] = tile;
+    return stations.some(
+      (s) => s.lon >= west && s.lon <= east && s.lat >= south && s.lat <= north,
+    );
+  });
 }
 
 /**
@@ -341,18 +360,21 @@ async function main() {
   }
 
   const tiles = splitBbox(bbox, tileStep);
+  const inhabited = new Set(tilesWithStations(tiles, stations));
+  const skipped = tiles.length - inhabited.size;
   const pending = tiles
     .map((tile, index) => ({ tile, index }))
-    .filter(({ index }) => !done.has(index));
-  const jobs = Math.max(1, Number(args.jobs ?? 3));
+    .filter(({ tile, index }) => inhabited.has(tile) && !done.has(index));
+  const jobs = Math.max(1, Number(args.jobs ?? 6));
+  const timeoutMs = Number(args["timeout-ms"] ?? 60_000);
   console.log(
-    `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel)…`,
+    `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel, ${skipped} empty skipped)…`,
   );
   const failedTiles = [];
   let completed = 0;
   await runTileQueue(
     pending,
-    (tile) => queryOverpass(tile),
+    (tile) => queryOverpass(tile, { timeoutMs }),
     (index, result) => {
       if (result === null) {
         failedTiles.push(index);
