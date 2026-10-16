@@ -116,7 +116,9 @@ French government fuel-price open data.
   `npm run brands:snapshot -- --bbox <w,s,e,n> --out ./brand-snapshot` (full
   France by default), then upload both files to
   `brands-resolutions/v1/` in R2: the script refuses partial or empty results,
-  so a saturated Overpass can never poison it.
+  so a saturated Overpass can never poison it. Progress is checkpointed per
+  tile — rerun the same command with `--resume` to fetch only the missing
+  tiles.
   Enrichment is encapsulated inside `useCountryStations`
   via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
   country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)

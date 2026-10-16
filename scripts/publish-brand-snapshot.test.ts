@@ -1,11 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
+  appendTileNodes,
   distanceMeters,
   fetchDgccrf,
   joinStations,
+  loadCheckpoint,
   parseArgs,
   parseBbox,
   queryOverpass,
+  saveDoneCheckpoint,
+  saveStationsCheckpoint,
   splitBbox,
   toManifestPayload,
   toSnapshotPayload,
@@ -105,5 +112,21 @@ describe("publish-brand-snapshot", () => {
         rounds: 1,
       }),
     ).resolves.toBeNull();
+  });
+
+  it("round-trips a checkpoint so --resume skips done tiles", () => {
+    const outDir = mkdtempSync(join(tmpdir(), "snapshot-"));
+    expect(loadCheckpoint(outDir)).toBeNull();
+
+    const stations = [{ id: "FR:1", lat: 48.85, lon: 2.35 }];
+    saveStationsCheckpoint(outDir, stations);
+    appendTileNodes(outDir, [{ key: "node/1", brand: "Total" }]);
+    appendTileNodes(outDir, []);
+    saveDoneCheckpoint(outDir, new Set([0, 2]));
+
+    const checkpoint = loadCheckpoint(outDir);
+    expect(checkpoint?.stations).toEqual(stations);
+    expect(checkpoint?.nodes).toEqual([{ key: "node/1", brand: "Total" }]);
+    expect(checkpoint?.done).toEqual(new Set([0, 2]));
   });
 });

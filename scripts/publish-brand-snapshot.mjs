@@ -10,12 +10,16 @@
 //   npx wrangler r2 object put fuelmap-bucket/brands-resolutions/v1/snapshot.json --file ./brand-snapshot/snapshot.json --content-type "application/json; charset=utf-8"
 //   npx wrangler r2 object put fuelmap-bucket/brands-resolutions/v1/manifest.json --file ./brand-snapshot/manifest.json --content-type "application/json; charset=utf-8"
 //
+// When Overpass saturates mid-crawl, progress is checkpointed per tile in
+// `--out` (`stations.json`, `nodes.jsonl`, `tiles-done.json`): rerun the exact
+// same command with `--resume` to fetch only the missing tiles.
+//
 // Safety rules (same as the Worker): an Overpass failure is never cached as an
 // empty result — without mirror data the script exits non-zero and writes
 // nothing. Use `--allow-empty` only to deliberately publish an empty area.
 //
 // Run with: npm run brands:snapshot -- [options]
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -199,6 +203,47 @@ function isTrustworthy(payload) {
   return /^\d{4}-\d{2}-\d{2}T/.test(payload.osm3s?.timestamp_osm_base ?? "");
 }
 
+/** Files holding crawl progress so `--resume` only fetches missing tiles. */
+export function checkpointPaths(outDir) {
+  return {
+    stationsFile: resolve(outDir, "stations.json"),
+    nodesFile: resolve(outDir, "nodes.jsonl"),
+    doneFile: resolve(outDir, "tiles-done.json"),
+  };
+}
+
+/** Read back a checkpoint, or `null` when none was written. */
+export function loadCheckpoint(outDir) {
+  const { stationsFile, nodesFile, doneFile } = checkpointPaths(outDir);
+  if (!existsSync(stationsFile) || !existsSync(doneFile)) return null;
+  const stations = JSON.parse(readFileSync(stationsFile, "utf8"));
+  const done = new Set(JSON.parse(readFileSync(doneFile, "utf8")));
+  const nodes = existsSync(nodesFile)
+    ? readFileSync(nodesFile, "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+    : [];
+  return { stations, done, nodes };
+}
+
+export function saveStationsCheckpoint(outDir, stations) {
+  writeFileSync(checkpointPaths(outDir).stationsFile, JSON.stringify(stations));
+}
+
+/** Append one tile's nodes immediately: an interruption keeps them. */
+export function appendTileNodes(outDir, nodes) {
+  if (nodes.length === 0) return;
+  appendFileSync(
+    checkpointPaths(outDir).nodesFile,
+    nodes.map((node) => JSON.stringify(node)).join("\n") + "\n",
+  );
+}
+
+export function saveDoneCheckpoint(outDir, done) {
+  writeFileSync(checkpointPaths(outDir).doneFile, JSON.stringify([...done]));
+}
+
 /** Query Overpass mirrors in order, with exponential backoff between rounds. */
 export async function queryOverpass(
   tile,
@@ -251,35 +296,69 @@ async function main() {
   const tileStep = Number(args.tile ?? 0.5);
   const outDir = resolve(process.cwd(), String(args.out ?? "./brand-snapshot"));
   const maxRecords = args["max-records"] ? Number(args["max-records"]) : Infinity;
+  const resume = Boolean(args.resume);
+  mkdirSync(outDir, { recursive: true });
 
-  console.log(`fetching DGCCRF coordinates…`);
-  const all = await fetchDgccrf(fetch, maxRecords);
-  const [west, south, east, north] = bbox;
-  const stations = all.filter(
-    (s) => s.lon >= west && s.lon <= east && s.lat >= south && s.lat <= north,
-  );
-  console.log(`…${stations.length} stations in bbox`);
+  // Checkpoint: stations once, OSM nodes incrementally, completed tile indexes
+  // alongside — so a saturated Overpass only costs a `--resume` rerun, never a
+  // full recrawl.
+  let stations = [];
+  let nodes = [];
+  let done = new Set();
+  const checkpoint = resume ? loadCheckpoint(outDir) : null;
+  if (checkpoint) {
+    stations = checkpoint.stations;
+    nodes = checkpoint.nodes;
+    done = checkpoint.done;
+    console.log(`resuming: ${stations.length} stations, ${done.size} tiles done`);
+  } else {
+    if (resume) console.log("no checkpoint found, starting fresh…");
+    console.log(`fetching DGCCRF coordinates…`);
+    const all = await fetchDgccrf(fetch, maxRecords);
+    const [west, south, east, north] = bbox;
+    stations = all.filter(
+      (s) => s.lon >= west && s.lon <= east && s.lat >= south && s.lat <= north,
+    );
+    console.log(`…${stations.length} stations in bbox`);
+    saveStationsCheckpoint(outDir, stations);
+  }
 
   const tiles = splitBbox(bbox, tileStep);
-  console.log(`querying ${tiles.length} Overpass tiles…`);
-  const nodes = [];
-  let failed = 0;
-  for (const [i, tile] of tiles.entries()) {
+  const remaining = tiles.filter((_, index) => !done.has(index));
+  console.log(`querying ${remaining.length}/${tiles.length} Overpass tiles…`);
+  const failedTiles = [];
+  let fetched = 0;
+  for (const [index, tile] of tiles.entries()) {
+    if (done.has(index)) continue;
     const result = await queryOverpass(tile);
     if (result === null) {
-      failed += 1;
-      console.warn(`tile ${i + 1}/${tiles.length}: mirrors down`);
+      failedTiles.push(index);
+      console.warn(`tile ${index + 1}/${tiles.length}: mirrors down`);
     } else {
+      appendTileNodes(outDir, result);
       nodes.push(...result);
+      done.add(index);
+      fetched += 1;
+      if (fetched % 25 === 0) {
+        saveDoneCheckpoint(outDir, done);
+      }
     }
-    if ((i + 1) % 25 === 0) console.log(`…${i + 1}/${tiles.length} tiles`);
+    if ((done.size + failedTiles.length) % 25 === 0) {
+      console.log(`…${done.size + failedTiles.length}/${tiles.length} tiles`);
+    }
   }
-  console.log(`…${nodes.length} OSM nodes, ${failed} failed tiles`);
+  saveDoneCheckpoint(outDir, done);
 
-  if (failed > 0) {
+  console.log(`…${nodes.length} OSM nodes, ${failedTiles.length} failed tiles`);
+
+  if (failedTiles.length > 0) {
     console.error(
-      `refusing to publish: ${failed} tile(s) missed Overpass data (a partial snapshot would drop brands)`,
+      `refusing to publish: ${failedTiles.length} tile(s) missed Overpass data (a partial snapshot would drop brands)`,
     );
+    console.error(`rerun with the same --out plus --resume to fill the gaps:`);
+    for (const index of failedTiles) {
+      console.error(`  tile ${index + 1}: ${tiles[index].join(",")}`);
+    }
     process.exitCode = 1;
     return;
   }
