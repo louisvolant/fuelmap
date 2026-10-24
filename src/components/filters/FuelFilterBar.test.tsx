@@ -30,4 +30,20 @@ describe("FuelFilterBar", () => {
     await user.click(chip);
     expect(chip).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("keeps a single fuel selected", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<FuelFilterBar />);
+
+    const gazole = screen.getByRole("button", { name: /Gazole/ });
+    const e85 = screen.getByRole("button", { name: /E85/ });
+
+    await user.click(gazole);
+    expect(gazole).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(e85);
+    expect(gazole).toHaveAttribute("aria-pressed", "false");
+    expect(e85).toHaveAttribute("aria-pressed", "true");
+    expect(useFilterStore.getState().selectedFuelIds).toEqual(["e85"]);
+  });
 });

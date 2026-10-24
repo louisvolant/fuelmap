@@ -4,8 +4,8 @@ import { useCountryStore } from "@/stores/countryStore";
 import { useFilterStore } from "@/stores/filterStore";
 
 /**
- * Horizontal fuel filter. Chips toggle the selected fuels:
- * one selection = single-fuel filter, several = stations offering all of them.
+ * Horizontal fuel filter. Chips are mutually exclusive: selecting a fuel
+ * replaces the previous one, and clicking the active chip shows all fuels.
  */
 export function FuelFilterBar() {
   const { t } = useTranslation();

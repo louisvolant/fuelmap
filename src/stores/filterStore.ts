@@ -4,8 +4,8 @@ import type { StationSort } from "@/lib/sortStations";
 
 interface FilterState {
   /**
-   * Selected fuels. Empty means "all fuels".
-   * One entry = single-fuel filter; several = multi-fuel filter.
+   * Selected fuel. Empty means "all fuels".
+   * Fuels are mutually exclusive: at most one id is selected at a time.
    */
   selectedFuelIds: string[];
   /** Hide stations that currently have a fuel in shortage. */
@@ -41,9 +41,9 @@ export const useFilterStore = create<FilterState>()(
 
       toggleFuel: (fuelId) =>
         set((state) => ({
-          selectedFuelIds: state.selectedFuelIds.includes(fuelId)
-            ? state.selectedFuelIds.filter((id) => id !== fuelId)
-            : [...state.selectedFuelIds, fuelId],
+          // Selecting a fuel replaces the previous one; clicking the active
+          // chip clears the filter.
+          selectedFuelIds: state.selectedFuelIds[0] === fuelId ? [] : [fuelId],
         })),
       toggleService: (service) =>
         set((state) => ({
@@ -65,7 +65,19 @@ export const useFilterStore = create<FilterState>()(
           maxDistanceMeters: null,
         }),
     }),
-    { name: "fuelmap.filters" },
+    {
+      name: "fuelmap.filters",
+      // Drop legacy multi-fuel selections persisted before fuels became
+      // exclusive.
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<FilterState> | undefined;
+        return {
+          ...current,
+          ...persistedState,
+          selectedFuelIds: (persistedState?.selectedFuelIds ?? []).slice(0, 1),
+        };
+      },
+    },
   ),
 );
 

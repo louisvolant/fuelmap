@@ -40,7 +40,8 @@ French government fuel-price open data.
 - 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has
   it in shortage) stays on the map, greyed out; stations with neither a price nor
   a brand are not drawn at all.
-- ⛽ **Fuel filter** — the active country's fuels; single or multi-select.
+- ⛽ **Fuel filter** — the active country's fuels, exclusive single-select:
+  selecting one replaces the previous choice, clicking it again shows all fuels.
 - 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
   **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
   theme. The choice is persisted.

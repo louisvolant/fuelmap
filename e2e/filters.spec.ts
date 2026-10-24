@@ -50,14 +50,22 @@ test("filters stations down to a single fuel", async ({ page }) => {
     .toEqual(["FR:75104004"]);
 });
 
-test("supports multi-fuel filtering", async ({ page }) => {
-  await page.getByRole("button", { name: "Gazole" }).click();
-  await page.getByRole("button", { name: "E10" }).click();
+test("replaces the selected fuel when another one is clicked", async ({ page }) => {
+  const gazole = page.getByRole("button", { name: "Gazole" });
+  const e10 = page.getByRole("button", { name: "E10" });
 
-  await expect.poll(() => sourceStationIds(page)).toEqual([
-    "FR:75101001",
-    "FR:75102002",
-  ]);
+  await gazole.click();
+  await expect(gazole).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() => sourceStationIds(page))
+    .toEqual(["FR:75101001", "FR:75102002", "FR:75103003"]);
+
+  await e10.click();
+  await expect(gazole).toHaveAttribute("aria-pressed", "false");
+  await expect(e10).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() => sourceStationIds(page))
+    .toEqual(["FR:75101001", "FR:75102002"]);
 });
 
 test("clearing filters restores every station", async ({ page }) => {

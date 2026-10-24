@@ -42,7 +42,7 @@ export function useFilteredStations(
   );
 }
 
-/** Fuel whose price is shown on markers: the first selected fuel, or `null`. */
+/** Fuel whose price is shown on markers: the selected fuel, or `null`. */
 export function useActiveFuelId(): string | null {
   return useFilterStore((state) => state.selectedFuelIds[0] ?? null);
 }
