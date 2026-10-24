@@ -18,6 +18,7 @@ export function FuelFilterBar() {
 
   return (
     <div
+      data-testid="fuel-filter-bar"
       role="group"
       aria-label={t("filters.fuel")}
       className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-full bg-white/80 p-1 shadow backdrop-blur dark:bg-slate-800/80"

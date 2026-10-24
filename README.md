@@ -42,6 +42,8 @@ French government fuel-price open data.
   a brand are not drawn at all.
 - ⛽ **Fuel filter** — the active country's fuels, exclusive single-select:
   selecting one replaces the previous choice, clicking it again shows all fuels.
+  Docked at the bottom of the map, it shifts clear of the station side panel and
+  rides above the station sheet on small portrait screens.
 - 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
   **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
   theme. The choice is persisted.
