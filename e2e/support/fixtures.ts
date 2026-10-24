@@ -2,6 +2,7 @@ import { test as base } from "@playwright/test";
 import { mockBasemap } from "./mockBasemap";
 import { mockBrandLogoMissing } from "./mockBrandLogos";
 import { mockOsmStations } from "./mockOsmStations";
+import { mockRadars } from "./mockRadars";
 
 /**
  * Playwright test with the heavy/network-dependent external services stubbed:
@@ -20,6 +21,8 @@ export const test = base.extend({
     await mockOsmStations(page);
     // No brand logo snapshot by default: specs fall back to the bundled marks.
     await mockBrandLogoMissing(page);
+    // Empty fixed-radar layer by default; radar specs override this route.
+    await mockRadars(page);
     await run(page);
   },
 });

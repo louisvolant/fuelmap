@@ -33,7 +33,9 @@ BRANDFETCH_API_URL = "https://api.brandfetch.io/v2/brands"
 #    `brands-logo/`); Brandfetch's terms allow caching for 30 days and the cron
 #    refreshes twice a month,
 #  - the last trustworthy OpenStreetMap payload of each bounding box (prefix
-#    `osm-last-good/`), served when every Overpass mirror is down.
+#    `osm-last-good/`), served when every Overpass mirror is down,
+#  - the French fixed-radar GeoJSON snapshot (prefix `radars-fr/`), refreshed
+#    from data.gouv.fr by the cron.
 [[r2_buckets]]
 binding = "BRANDS_BUCKET"
 bucket_name = "fuelmap-bucket"

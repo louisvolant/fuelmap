@@ -9,6 +9,7 @@ import { ListButton } from "@/components/list/ListButton";
 import { StationListSheet } from "@/components/list/StationListSheet";
 import { LocateButton } from "@/components/map/LocateButton";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import { RadarMarkers } from "@/components/map/RadarMarkers";
 import { ZoomLevelBadge } from "@/components/map/ZoomLevelBadge";
 import { MapContext } from "@/components/map/MapContext";
 import { StationMarkers } from "@/components/map/StationMarkers";
@@ -28,6 +29,7 @@ import {
   useFilteredStations,
 } from "@/hooks/useFilteredStations";
 import { useCountryStations } from "@/hooks/useCountryStations";
+import { useFrenchRadars } from "@/hooks/useFrenchRadars";
 import { useInitialView } from "@/hooks/useInitialView";
 import { usePanelPresentation } from "@/hooks/usePanelPresentation";
 import { useTheme } from "@/hooks/useTheme";
@@ -73,6 +75,7 @@ export default function App() {
   });
 
   const activeFuelId = useActiveFuelId();
+  const { data: radars } = useFrenchRadars();
   const sortBy = useFilterStore((state) => state.sortBy);
   const route = useRouteStore((state) => state.route);
   const onlyOnRoute = useRouteStore((state) => state.onlyOnRoute);
@@ -222,6 +225,7 @@ export default function App() {
 
         <UserLocationLayer />
         <RouteLayer />
+        <RadarMarkers data={radars} />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-2 p-3">
           <div className="flex flex-wrap items-center justify-center gap-2">

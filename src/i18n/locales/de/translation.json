@@ -126,6 +126,26 @@
     "hvo": "HVO",
     "metano": "CNG"
   },
+  "radars": {
+    "title": "Fester Blitzer",
+    "settingsTitle": "Feste Blitzer",
+    "settingsLabel": "Feste Blitzer anzeigen",
+    "settingsDescription": "Zeigt die offiziellen festen Blitzer auf der Karte (nur Frankreich).",
+    "speed": "Erlaubte Geschwindigkeit",
+    "noSpeed": "Keine Geschwindigkeit angegeben",
+    "commissioned": "Inbetriebnahme",
+    "source": "Quelle: Innenministerium",
+    "types": {
+      "etf": "Fester Geschwindigkeitsblitzer",
+      "etd": "Diskriminierender Geschwindigkeitsblitzer",
+      "ett": "Blitzer neuer Generation",
+      "etu": "Stadtblitzer",
+      "etvm": "Abschnittskontrolle",
+      "etfr": "Rotlichtblitzer",
+      "etpn": "Bahnübergangsblitzer",
+      "other": "Fester Blitzer"
+    }
+  },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten",
     "offline": "Sie sind offline"

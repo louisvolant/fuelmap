@@ -126,6 +126,26 @@
     "hvo": "HVO",
     "metano": "GNV"
   },
+  "radars": {
+    "title": "Radar fixe",
+    "settingsTitle": "Radars fixes",
+    "settingsLabel": "Afficher les radars fixes",
+    "settingsDescription": "Affiche les radars fixes officiels sur la carte (France uniquement).",
+    "speed": "Vitesse contrôlée",
+    "noSpeed": "Vitesse non communiquée",
+    "commissioned": "Mise en service",
+    "source": "Source : Ministère de l'Intérieur",
+    "types": {
+      "etf": "Radar vitesse fixe",
+      "etd": "Radar vitesse discriminant",
+      "ett": "Radar nouvelle génération",
+      "etu": "Radar urbain",
+      "etvm": "Radar vitesse moyenne",
+      "etfr": "Radar feu rouge",
+      "etpn": "Radar passage à niveau",
+      "other": "Radar fixe"
+    }
+  },
   "errors": {
     "generic": "Une erreur est survenue",
     "offline": "Vous êtes hors ligne"

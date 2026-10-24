@@ -1,14 +1,16 @@
 /**
  * Cloudflare Worker for FuelMap.
  *
- * It does three things:
+ * It does five things:
  *  1. Serves the built SPA from the `ASSETS` binding (static assets, with SPA
  *     fallback so deep links resolve to `index.html`).
  *  2. Exposes `GET /api/de/stations` as a proxy in front of Tankerkönig, so the
  *     German API key stays server-side and never ships to the browser.
  *  3. Exposes `GET /api/it/stations`, which fetches and joins the two MIMIT CSV
  *     files (no CORS upstream) and caches the result at the edge.
- *  4. Exposes `GET /api/geo`, a coarse location derived from the client IP.
+ *  4. Exposes `GET /api/fr/radars`, the country-wide GeoJSON snapshot of the
+ *     official French fixed speed cameras.
+ *  5. Exposes `GET /api/geo`, a coarse location derived from the client IP.
  *
  * Secrets are set once with `npx wrangler secret put TANKERKOENIG_API_KEY` and
  * are never wiped on deploy thanks to `keep_vars = true` in `wrangler.toml`.
@@ -23,6 +25,10 @@ import {
   parseBelgianMaxPrices,
   parseLuxembourgMaxPrices,
 } from "../src/lib/maxPrices";
+import {
+  parseFrenchRadarsCsv,
+  type RadarFeatureCollection,
+} from "../src/lib/radars";
 import {
   BRANDFETCH_DOMAINS,
   assetHostPath,
@@ -374,7 +380,7 @@ export interface Env {
   TANKERKOENIG_API_KEY?: string;
   /** Upstream Tankerkönig endpoint (overridable via `[vars]`). */
   TANKERKOENIG_API_URL?: string;
-  /** R2 bucket holding the snapshotted brand logos. */
+  /** R2 bucket holding brand logos, OSM fallbacks and the radar snapshot. */
   BRANDS_BUCKET: R2BucketLike;
   /** Brandfetch Brand API key (Worker secret). */
   BRANDFETCH_API_KEY?: string;
@@ -443,6 +449,34 @@ const BRAND_SNAPSHOT_MANIFEST_KEY = `${BRAND_SNAPSHOT_PREFIX}${BRAND_SNAPSHOT_VE
 const BRAND_SNAPSHOT_KEY = `${BRAND_SNAPSHOT_PREFIX}${BRAND_SNAPSHOT_VERSION}/snapshot.json`;
 const BRAND_SNAPSHOT_CACHE_KEY = "https://fuelmap.internal/api/fr/brands/snapshot";
 const BRAND_SNAPSHOT_CACHE_TTL = 60 * 60;
+
+/**
+ * French fixed speed cameras (Ministry of the Interior, Licence Ouverte 2.0).
+ *
+ * The whole country is one ~3 300-point CSV (~166 KB), so there is no per-tile
+ * query: the Worker converts it to GeoJSON once, stores it in R2, and serves that
+ * snapshot from every edge location. The dataset is published annually; a
+ * monthly refresh keeps it current without hammering data.gouv.fr.
+ */
+const FRENCH_RADARS_DATASET_URL =
+  "https://www.data.gouv.fr/api/1/datasets/liste-des-radars-fixes-en-france/";
+/** Stable direct link, used when the dataset metadata cannot be read. */
+const FRENCH_RADARS_CSV_FALLBACK_URL =
+  "https://www.data.gouv.fr/api/1/datasets/r/17f7cfd9-a5fe-4b6a-9f5d-3625feaa396e";
+const FRENCH_RADARS_SNAPSHOT_KEY = "radars-fr/v1.geojson";
+const FRENCH_RADARS_CACHE_KEY = "https://fuelmap.internal/api/fr/radars";
+const FRENCH_RADARS_MAX_AGE_MS = 31 * 24 * 60 * 60 * 1000;
+const FRENCH_RADARS_CACHE_TTL = 24 * 60 * 60;
+
+interface DataGouvResource {
+  url?: string;
+  format?: string;
+  last_modified?: string;
+}
+
+interface DataGouvDataset {
+  resources?: DataGouvResource[];
+}
 
 /**
  * Run an Overpass query against the mirrors until one answers.
@@ -671,6 +705,152 @@ async function handleBrandSnapshot(
   return json({ message: "not found" }, 404);
 }
 
+/** Resolve the current CSV resource from the data.gouv.fr dataset metadata. */
+async function resolveFrenchRadarsCsvUrl(): Promise<string> {
+  try {
+    const response = await fetch(FRENCH_RADARS_DATASET_URL, {
+      headers: { accept: "application/json" },
+    });
+    if (response.ok) {
+      const dataset = (await response.json()) as DataGouvDataset;
+      const csv = (dataset.resources ?? [])
+        .filter((resource) => resource.format?.toLowerCase() === "csv" && resource.url)
+        .sort((a, b) =>
+          (b.last_modified ?? "").localeCompare(a.last_modified ?? ""),
+        )[0];
+      if (csv?.url) return csv.url;
+    }
+  } catch {
+    // Fall back to the stable resource URL below.
+  }
+  return FRENCH_RADARS_CSV_FALLBACK_URL;
+}
+
+/** The official CSV is Windows-1252, while the Worker speaks UTF-8. */
+function decodeRadarCsv(buffer: ArrayBuffer): string {
+  try {
+    return new TextDecoder("windows-1252").decode(buffer);
+  } catch {
+    // Some runtimes expose TextDecoder but only support UTF-8.
+  }
+  try {
+    return new TextDecoder("iso-8859-1").decode(buffer);
+  } catch {
+    // Last resort: the French text only uses Latin-1 code points.
+    const bytes = new Uint8Array(buffer);
+    let text = "";
+    for (let index = 0; index < bytes.length; index += 8192) {
+      text += String.fromCharCode(...bytes.subarray(index, index + 8192));
+    }
+    return text;
+  }
+}
+
+/** Download and parse the whole French fixed-radar dataset. */
+async function fetchFrenchRadars(): Promise<RadarFeatureCollection> {
+  const csvUrl = await resolveFrenchRadarsCsvUrl();
+  const response = await fetch(csvUrl, {
+    headers: { accept: "text/csv,*/*;q=0.8" },
+  });
+  if (!response.ok) {
+    throw new Error(`fixed-radar source answered ${response.status}`);
+  }
+
+  const collection = parseFrenchRadarsCsv(
+    decodeRadarCsv(await response.arrayBuffer()),
+  );
+  // Never overwrite a healthy snapshot with an empty or malformed answer.
+  if (collection.features.length === 0) {
+    throw new Error("fixed-radar source returned no camera");
+  }
+  return collection;
+}
+
+/** Refresh the R2 snapshot and return the serialized GeoJSON. */
+async function refreshFrenchRadars(env: Env): Promise<string> {
+  const collection = await fetchFrenchRadars();
+  const payload = JSON.stringify(collection);
+
+  await env.BRANDS_BUCKET.put(FRENCH_RADARS_SNAPSHOT_KEY, payload, {
+    httpMetadata: {
+      contentType: "application/geo+json; charset=utf-8",
+      cacheControl: "no-store",
+    },
+    customMetadata: {
+      refreshedAt: String(Date.now()),
+      count: String(collection.features.length),
+    },
+  });
+
+  return payload;
+}
+
+function radarResponse(payload: string, cacheable: boolean): Response {
+  return new Response(payload, {
+    headers: {
+      "content-type": "application/geo+json; charset=utf-8",
+      "cache-control": cacheable
+        ? `public, max-age=${ONE_HOUR}, s-maxage=${FRENCH_RADARS_CACHE_TTL}, stale-while-revalidate=604800`
+        : "no-store",
+      ...(cacheable ? {} : { "x-fuelmap-stale": "1" }),
+    },
+  });
+}
+
+/**
+ * Country-wide fixed-radar snapshot:
+ * - fresh R2 snapshot → served immediately (no upstream call);
+ * - stale snapshot → served now (marked stale) and refreshed in the background;
+ * - no snapshot → fetched synchronously, with a retryable error on failure.
+ */
+async function handleFrenchRadars(
+  env: Env,
+  ctx: ExecutionContextLike,
+): Promise<Response> {
+  const cacheKey = new Request(FRENCH_RADARS_CACHE_KEY, { method: "GET" });
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return cached;
+
+  const stored = await env.BRANDS_BUCKET.get(FRENCH_RADARS_SNAPSHOT_KEY);
+  if (stored) {
+    try {
+      const payload = JSON.stringify(await stored.json());
+      const fresh = snapshotAge(stored) <= FRENCH_RADARS_MAX_AGE_MS;
+      const response = radarResponse(payload, fresh);
+
+      if (fresh) {
+        ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
+      } else {
+        ctx.waitUntil(refreshFrenchRadars(env).catch(() => {}));
+      }
+      return response;
+    } catch {
+      // Unreadable snapshot: fall through and rebuild it.
+    }
+  }
+
+  try {
+    const payload = await refreshFrenchRadars(env);
+    const response = radarResponse(payload, true);
+    ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
+    return response;
+  } catch {
+    return json({ message: "fixed-radar source unavailable" }, 502);
+  }
+}
+
+/** Cron helper: refresh the snapshot once it is older than a month. */
+async function refreshFrenchRadarsIfStale(env: Env): Promise<void> {
+  try {
+    const stored = await env.BRANDS_BUCKET.get(FRENCH_RADARS_SNAPSHOT_KEY);
+    if (!stored || snapshotAge(stored) > FRENCH_RADARS_MAX_AGE_MS) {
+      await refreshFrenchRadars(env);
+    }
+  } catch {
+    // Keep the last good snapshot; the next request or cron retries.
+  }
+}
+
 async function handleGermanStations(url: URL, env: Env): Promise<Response> {
   const lat = url.searchParams.get("lat");
   const lng = url.searchParams.get("lng");
@@ -842,6 +1022,10 @@ export default {
       return handleBrandSnapshot(url, env, ctx);
     }
 
+    if (url.pathname === "/api/fr/radars") {
+      return handleFrenchRadars(env, ctx);
+    }
+
     if (url.pathname.startsWith("/brands/")) {
       return handleBrandAsset(url.pathname, env, ctx);
     }
@@ -850,12 +1034,13 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  /** Cron trigger: refresh the Brandfetch logo snapshots twice a month. */
+  /** Cron trigger: refresh brand logos and the fixed-radar snapshot. */
   async scheduled(
     _event: unknown,
     env: Env,
     ctx: ExecutionContextLike,
   ): Promise<void> {
     ctx.waitUntil(refreshAllBrands(env));
+    ctx.waitUntil(refreshFrenchRadarsIfStale(env));
   },
 };

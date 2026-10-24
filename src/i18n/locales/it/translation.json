@@ -126,6 +126,26 @@
     "hvo": "HVO",
     "metano": "Metano"
   },
+  "radars": {
+    "title": "Autovelox fisso",
+    "settingsTitle": "Autovelox fissi",
+    "settingsLabel": "Mostra autovelox fissi",
+    "settingsDescription": "Mostra gli autovelox fissi ufficiali sulla mappa (solo Francia).",
+    "speed": "Velocità controllata",
+    "noSpeed": "Velocità non indicata",
+    "commissioned": "Messa in servizio",
+    "source": "Fonte: Ministero dell'Interno",
+    "types": {
+      "etf": "Autovelox fisso",
+      "etd": "Autovelox discriminante",
+      "ett": "Autovelox di nuova generazione",
+      "etu": "Autovelox urbano",
+      "etvm": "Tutor (velocità media)",
+      "etfr": "Autovelox semaforo rosso",
+      "etpn": "Autovelox passaggio a livello",
+      "other": "Autovelox fisso"
+    }
+  },
   "errors": {
     "generic": "Si è verificato un errore",
     "offline": "Sei offline"

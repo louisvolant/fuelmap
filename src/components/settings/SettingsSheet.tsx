@@ -4,6 +4,7 @@ import { CountrySwitcher } from "./CountrySwitcher";
 import { HistoryLink } from "./HistoryLink";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { MapStyleSwitcher } from "./MapStyleSwitcher";
+import { RadarToggle } from "./RadarToggle";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
 interface SettingsSheetProps {
@@ -34,6 +35,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           <h3 className="mb-2 text-sm font-semibold">{t("common.language")}</h3>
           <LanguageSwitcher />
         </section>
+        <RadarToggle />
         <HistoryLink />
       </div>
     </Sheet>

@@ -40,6 +40,11 @@ French government fuel-price open data.
 - 🌫️ **Dimmed markers** — a station that does not offer the current fuel (or has
   it in shortage) stays on the map, greyed out; stations with neither a price nor
   a brand are not drawn at all.
+- 🚨 **Fixed speed cameras (France)** — the official Ministry of the Interior
+  dataset (~3 300 fixed cameras) as a passive map layer from zoom 11, with the
+  camera type, controlled speed and commissioning date on click. It can be
+  disabled in the settings. The whole country is one R2 snapshot, so panning
+  never re-queries the source.
 - ⛽ **Fuel filter** — the active country's fuels, exclusive single-select:
   selecting one replaces the previous choice, clicking it again shows all fuels.
   Docked at the bottom of the map, it shifts clear of the station side panel and
@@ -200,6 +205,26 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 > here for identification only; this app is not affiliated with, nor endorsed by,
 > these brands.
 
+### Fixed speed cameras (France)
+
+- **Dataset:** *Liste des radars fixes en France* (Ministère de l'Intérieur),
+  Licence Ouverte 2.0, ~3 300 fixed cameras, updated annually (~166 KB CSV).
+- The source is **Windows-1252**, semicolon-separated, with a BOM. The Worker
+  decodes it, converts each row to a GeoJSON point, and stores the whole country
+  as `radars-fr/v1.geojson` in R2. There is **no per-tile query**: one snapshot
+  covers France, which is small enough to load once.
+- `GET /api/fr/radars` serves that snapshot from R2, edge-cached for a day. A
+  fresh snapshot is served directly; a stale one is served immediately (marked
+  `x-fuelmap-stale: 1`) and refreshed in the background; the last good snapshot
+  is kept when data.gouv.fr is unavailable. The existing cron checks it once a
+  month.
+- The layer is **passive**: it shows fixed camera positions and their details,
+  with no proximity alert or detection. In France, real-time "radar ahead"
+  warnings are regulated as radar detectors; keep this feature informational.
+- Only displayed for France, from zoom 11, and can be turned off under
+  **Settings → Fixed speed cameras**. Attribution: *Radars fixes — Ministère de
+  l'Intérieur, Licence Ouverte 2.0*.
+
 ### Germany
 
 - **Dataset:** MTS-K / Tankerkönig (near-real-time fuel prices, CC BY 4.0).
@@ -294,7 +319,8 @@ Open the printed URL (default http://localhost:5173).
   Specs must import `test` from `./support/fixtures` rather than
   `@playwright/test`.
 - Covered flows: map + markers, fuel and advanced filters, station detail, navigation
-  hand-off, favorites persistence, geolocation radius, theme/language, and the PWA.
+  hand-off, favorites persistence, geolocation radius, theme/language, fixed
+  speed cameras, and the PWA.
 
 ```bash
 npm test          # 60+ unit/component tests
@@ -357,7 +383,9 @@ The app deploys as a **Cloudflare Worker that also serves the SPA**:
    marks; nothing is cached on a failure, and the fallback is never written back
    to the edge cache, so a recovered upstream is picked up immediately,
    `GET /brands/<id>` + `GET /brands/manifest.json` — brand logos snapshotted
-   from the Brandfetch Brand API into R2 (see below), and
+   from the Brandfetch Brand API into R2 (see below),
+   `GET /api/fr/radars` — the official French fixed-radar GeoJSON snapshot
+   (also stored in R2 and refreshed by the cron), and
    `GET /api/geo` — a coarse location derived from the client IP
    (Cloudflare `request.cf`), used when geolocation is not authorized.
 
@@ -373,8 +401,10 @@ Deploy with `npm run deploy` (build + `wrangler deploy`, wrangler is pinned as a
 dev dependency). After deploying, `GET /brands/manifest.json` confirms the
 Worker is live and that it can see the Brand API secret.
 
-`wrangler.toml` also declares the **R2 bucket** holding the brand-logo snapshots
-(`BRANDS_BUCKET` → `fuelmap-bucket`) and the **cron trigger** that refreshes them.
+`wrangler.toml` also declares the **R2 bucket** holding the brand-logo
+snapshots, the last-good OpenStreetMap payloads and the French fixed-radar
+GeoJSON (`BRANDS_BUCKET` → `fuelmap-bucket`) and the **cron trigger** that
+refreshes them.
 
 `wrangler.toml` sets **`keep_vars = true`** so environment variables configured
 in the dashboard survive every deploy.
@@ -385,4 +415,6 @@ are queried directly by the browser.
 ## Attribution & license
 
 - Fuel data: **DGCCRF / data.economie.gouv.fr**, Licence Ouverte v2.0 (Etalab).
+- Fixed speed cameras: **Ministère de l'Intérieur**, Licence Ouverte v2.0
+  (Etalab).
 - Map data: **© OpenStreetMap contributors**, via **OpenFreeMap / OpenMapTiles**.

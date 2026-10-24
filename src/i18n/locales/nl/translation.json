@@ -126,6 +126,26 @@
     "hvo": "HVO",
     "metano": "CNG"
   },
+  "radars": {
+    "title": "Vaste flitser",
+    "settingsTitle": "Vaste flitsers",
+    "settingsLabel": "Vaste flitsers tonen",
+    "settingsDescription": "Toont de officiële vaste flitsers op de kaart (alleen Frankrijk).",
+    "speed": "Gecontroleerde snelheid",
+    "noSpeed": "Snelheid niet vermeld",
+    "commissioned": "Ingebruikname",
+    "source": "Bron: Ministerie van Binnenlandse Zaken",
+    "types": {
+      "etf": "Vaste snelheidsflitser",
+      "etd": "Onderscheidende snelheidsflitser",
+      "ett": "Nieuwe generatie flitser",
+      "etu": "Stedelijke flitser",
+      "etvm": "Trajectcontrole",
+      "etfr": "Roodlichtflitser",
+      "etpn": "Spoorwegovergangflitser",
+      "other": "Vaste flitser"
+    }
+  },
   "errors": {
     "generic": "Er is een fout opgetreden",
     "offline": "Je bent offline"

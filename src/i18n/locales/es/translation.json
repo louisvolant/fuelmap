@@ -126,6 +126,26 @@
     "hvo": "HVO",
     "metano": "GNC"
   },
+  "radars": {
+    "title": "Radar fijo",
+    "settingsTitle": "Radares fijos",
+    "settingsLabel": "Mostrar radares fijos",
+    "settingsDescription": "Muestra los radares fijos oficiales en el mapa (solo Francia).",
+    "speed": "Velocidad controlada",
+    "noSpeed": "Velocidad no indicada",
+    "commissioned": "Puesta en servicio",
+    "source": "Fuente: Ministerio del Interior",
+    "types": {
+      "etf": "Radar fijo de velocidad",
+      "etd": "Radar de velocidad discriminante",
+      "ett": "Radar de nueva generación",
+      "etu": "Radar urbano",
+      "etvm": "Radar de velocidad media",
+      "etfr": "Radar de semáforo en rojo",
+      "etpn": "Radar de paso a nivel",
+      "other": "Radar fijo"
+    }
+  },
   "errors": {
     "generic": "Se ha producido un error",
     "offline": "Estás sin conexión"

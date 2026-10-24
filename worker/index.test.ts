@@ -284,3 +284,154 @@ describe("French brand snapshot", () => {
     expect(await manifest.json()).toMatchObject({ count: 1 });
   });
 });
+
+describe("French fixed radars", () => {
+  const SNAPSHOT_KEY = "radars-fr/v1.geojson";
+  const ENDPOINT = "https://fuelmap.example/api/fr/radars";
+  const CSV = [
+    "Numéro de radar;Type de radar;Date de mise en service;VMA ;Latitude; Longitude",
+    "12001;ETD;31/10/2011 00:00;70;+45.361;+4.2526",
+    "FE391502;ETPN;26/06/2015 00:00;NA;+48.53771;+2.37489",
+  ].join("\r\n");
+  const COLLECTION = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        id: "12001",
+        geometry: { type: "Point", coordinates: [4.2526, 45.361] },
+        properties: {
+          id: "12001",
+          type: "ETD",
+          maxSpeedKmh: 70,
+          commissionedAt: "2011-10-31",
+        },
+      },
+    ],
+  };
+
+  /** Encode text as Windows-1252 (accented characters are in the Latin-1 range). */
+  function latin1Bytes(text: string): Uint8Array {
+    return Uint8Array.from([...text].map((character) => character.charCodeAt(0)));
+  }
+
+  function storeSnapshot(bucket: ReturnType<typeof makeBucket>, ageMs: number) {
+    bucket.store.set(SNAPSHOT_KEY, {
+      value: JSON.stringify(COLLECTION),
+      options: {
+        customMetadata: { refreshedAt: String(Date.now() - ageMs) },
+      },
+    });
+  }
+
+  it("serves a fresh R2 snapshot without calling upstream", async () => {
+    const bucket = makeBucket();
+    storeSnapshot(bucket, 60_000);
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const context = makeContext();
+
+    const response = await worker.fetch(
+      new Request(ENDPOINT),
+      makeEnv(bucket),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-fuelmap-stale")).toBeNull();
+    expect(await response.json()).toEqual(COLLECTION);
+    await Promise.all(context.pending);
+    expect(upstream).not.toHaveBeenCalled();
+    expect(cachePut).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds the snapshot from the official CSV and stores it in R2", async () => {
+    const bucket = makeBucket();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/datasets/liste-des-radars-fixes-en-france/")) {
+          return new Response(
+            JSON.stringify({
+              resources: [
+                {
+                  format: "csv",
+                  url: "https://example.test/radars.csv",
+                  last_modified: "2025-12-30T00:00:00Z",
+                },
+              ],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response(latin1Bytes(CSV), { status: 200 });
+      }),
+    );
+    const context = makeContext();
+
+    const response = await worker.fetch(
+      new Request(ENDPOINT),
+      makeEnv(bucket),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      features: { id: string }[];
+    };
+    expect(body.features.map((feature) => feature.id)).toEqual([
+      "12001",
+      "FE391502",
+    ]);
+
+    await Promise.all(context.pending);
+    const stored = bucket.store.get(SNAPSHOT_KEY);
+    expect(stored).toBeDefined();
+    expect(stored?.options?.customMetadata?.count).toBe("2");
+    expect(stored?.options?.customMetadata?.refreshedAt).toBeTruthy();
+  });
+
+  it("serves the last snapshot when the upstream is down and marks it stale", async () => {
+    const bucket = makeBucket();
+    storeSnapshot(bucket, 40 * 24 * 60 * 60 * 1000);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("upstream down");
+      }),
+    );
+    const context = makeContext();
+
+    const response = await worker.fetch(
+      new Request(ENDPOINT),
+      makeEnv(bucket),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-fuelmap-stale")).toBe("1");
+    expect(await response.json()).toEqual(COLLECTION);
+    await Promise.all(context.pending);
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("answers 502 when there is no snapshot and the upstream fails", async () => {
+    const bucket = makeBucket();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("upstream down");
+      }),
+    );
+
+    const response = await worker.fetch(
+      new Request(ENDPOINT),
+      makeEnv(bucket),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(502);
+    expect([...bucket.store.keys()]).toEqual([]);
+  });
+});
