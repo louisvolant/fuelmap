@@ -76,3 +76,23 @@ test("clearing filters restores every station", async ({ page }) => {
   await e85.click();
   await expect.poll(() => sourceStationIds(page)).toHaveLength(4);
 });
+
+test("remembers the selected fuel after a reload", async ({ page }) => {
+  const e85 = page.getByRole("button", { name: "E85" });
+  await e85.click();
+  await expect(e85).toHaveAttribute("aria-pressed", "true");
+
+  // Wait for the preset write, then drop the localStorage mirror so only
+  // IndexedDB can restore the selection.
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("fuelmap.filters")))
+    .toContain("e85");
+  await page.evaluate(() => localStorage.removeItem("fuelmap.filters"));
+
+  await page.reload();
+
+  await expect(page.getByRole("button", { name: "E85" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});

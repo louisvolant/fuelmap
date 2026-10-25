@@ -69,6 +69,7 @@ export default function App() {
 
   const userPosition = useGeolocationStore((state) => state.position);
   const maxDistanceMeters = useFilterStore((state) => state.maxDistanceMeters);
+  const selectedFuelIds = useFilterStore((state) => state.selectedFuelIds);
   const filteredStations = useFilteredStations(stations, {
     center: userPosition ?? undefined,
     maxDistanceMeters: maxDistanceMeters ?? undefined,
@@ -98,10 +99,25 @@ export default function App() {
   }, [loadFavorites]);
 
   // Switching country changes the fuel catalog: clear the fuel selection so it
-  // does not reference fuels that do not exist in the new country.
+  // does not reference fuels that do not exist in the new country. Skip the
+  // first render, otherwise the preset restored from IndexedDB would be wiped
+  // on every reload.
+  const previousCountryRef = useRef(countryCode);
   useEffect(() => {
+    if (previousCountryRef.current === countryCode) return;
+    previousCountryRef.current = countryCode;
     useFilterStore.getState().clearFuels();
   }, [countryCode]);
+
+  // A restored preset may target a fuel the active country does not sell (for
+  // example after changing country and reloading).
+  useEffect(() => {
+    if (selectedFuelIds.length === 0) return;
+    const available = new Set(country.fuelCatalog.map((fuel) => fuel.id));
+    if (selectedFuelIds.some((fuelId) => !available.has(fuelId))) {
+      useFilterStore.getState().clearFuels();
+    }
+  }, [country, selectedFuelIds]);
 
   // Move the camera to the newly selected country. The country change coming
   // from the initial view (IP) must not override the "around me" framing.

@@ -47,6 +47,7 @@ French government fuel-price open data.
   never re-queries the source.
 - ⛽ **Fuel filter** — the active country's fuels, exclusive single-select:
   selecting one replaces the previous choice, clicking it again shows all fuels.
+  The preset is stored in IndexedDB, so it is restored on the next visit.
 - 🗺️ **Basemap styles** — switch between **Liberty** (default), **Bright**,
   **Positron** and **Dark** on the fly, plus an **Auto** mode that follows the
   theme. The choice is persisted.

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { setMeta } from "@/lib/db/indexedDb";
 import { countActiveFilters, useFilterStore } from "@/stores/filterStore";
 
 describe("filterStore", () => {
@@ -24,8 +25,8 @@ describe("filterStore", () => {
   });
 
   it("drops legacy multi-fuel selections when rehydrating", async () => {
-    localStorage.setItem(
-      "fuelmap.filters",
+    await setMeta(
+      "preset:fuelmap.filters",
       JSON.stringify({
         state: { selectedFuelIds: ["gazole", "e10"] },
         version: 0,

@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { presetStorage } from "@/lib/presetStorage";
 import type { StationSort } from "@/lib/sortStations";
 
 interface FilterState {
@@ -67,6 +68,9 @@ export const useFilterStore = create<FilterState>()(
     }),
     {
       name: "fuelmap.filters",
+      // Presets survive reloads in IndexedDB (see `presetStorage`), with the
+      // previous localStorage payload migrated on the first read.
+      storage: createJSONStorage(() => presetStorage),
       // Drop legacy multi-fuel selections persisted before fuels became
       // exclusive.
       merge: (persisted, current) => {
