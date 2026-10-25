@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setMeta } from "@/lib/db/indexedDb";
 import { resolveInitialCamera } from "@/hooks/useInitialView";
 
 function stubGeolocation(position: [number, number] | null) {
@@ -39,8 +40,9 @@ function stubGeoApi(payload: unknown) {
 }
 
 describe("resolveInitialCamera", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
+    await setMeta("preset:fuelmap.geoGranted", undefined);
   });
 
   afterEach(() => {
@@ -73,6 +75,16 @@ describe("resolveInitialCamera", () => {
     expect(camera?.source).toBe("geolocation");
     expect(camera?.center).toEqual([2.3522, 48.8566]);
     expect(localStorage.getItem("fuelmap.lastPosition")).toBe("2.3522,48.8566");
+  });
+
+  it("uses an IndexedDB acceptance marker when localStorage was cleared", async () => {
+    await setMeta("preset:fuelmap.geoGranted", true);
+    stubPermission("prompt");
+    stubGeolocation([2.3522, 48.8566]);
+
+    const camera = await resolveInitialCamera();
+    expect(camera?.source).toBe("geolocation");
+    expect(camera?.center).toEqual([2.3522, 48.8566]);
   });
 
   it("falls back to the IP location when geolocation is not usable", async () => {

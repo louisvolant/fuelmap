@@ -3,8 +3,9 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import type { CountryCode } from "@/countries/types";
 import { boundingBox } from "@/lib/geo";
 import { fetchGeoIp } from "@/lib/geoIp";
+import { queryGeolocationPermission } from "@/lib/geolocation";
 import {
-  isGeolocationMarkedGranted,
+  isGeolocationMarkedGrantedAsync,
   markGeolocationGranted,
   readLastPosition,
   writeLastPosition,
@@ -29,21 +30,6 @@ export interface InitialCamera {
   center: [number, number];
   country: CountryCode | null;
   source: "geolocation" | "ip";
-}
-
-type PermissionState = "granted" | "denied" | "prompt" | "unsupported";
-
-/** Read the geolocation permission without prompting, when supported. */
-async function geolocationPermission(): Promise<PermissionState> {
-  try {
-    const status = await navigator.permissions?.query({
-      name: "geolocation" as PermissionName,
-    });
-    return status?.state ?? "unsupported";
-  } catch {
-    // Safari and some browsers do not support querying geolocation.
-    return "unsupported";
-  }
 }
 
 function getCurrentPosition(): Promise<[number, number] | null> {
@@ -91,10 +77,10 @@ export async function resolveInitialCamera(): Promise<InitialCamera | null> {
     return { center: remembered, country: null, source: "geolocation" };
   }
 
-  const permission = await geolocationPermission();
+  const permission = await queryGeolocationPermission();
   const mayLocate =
     permission === "granted" ||
-    isGeolocationMarkedGranted() ||
+    (await isGeolocationMarkedGrantedAsync()) ||
     // No Permissions API (Safari): the browser resolves silently if the user
     // already allowed this site, and only prompts otherwise.
     permission === "unsupported";

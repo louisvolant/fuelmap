@@ -66,7 +66,9 @@ French government fuel-price open data.
   services, and a radius around your position.
 - 📌 **Geolocation** — the app opens around you (5–10 km) when geolocation is
   already authorized, otherwise around the **IP-based location** (Cloudflare
-  `request.cf`), with a recenter button at any time.
+  `request.cf`), with a recenter button at any time. The acceptance and last fix
+  are remembered (IndexedDB + localStorage), so the blue button recenters
+  without asking for permission again, including in installed PWAs.
 - 🪟 **Station details panel** — a right-hand slide-over on desktop and phones in
   landscape, switchable to the left; a bottom sheet on small portrait screens.
 - 📈 **Fill-up history** — delegated to [FuelStats](https://www.fuelstats.net).
