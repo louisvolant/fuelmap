@@ -34,42 +34,6 @@ test.describe("wide viewport", () => {
     const onLeft = await dialog.boundingBox();
     expect(onLeft?.x ?? 0).toBeLessThan(1200 / 2);
   });
-
-  test("keeps the fuel filters above the map, clear of the side panel", async ({
-    page,
-  }) => {
-    await openStation(page);
-
-    const bar = page.getByTestId("fuel-filter-bar");
-    const dialog = page.getByRole("dialog");
-    await expect(bar).toBeVisible();
-
-    const barBox = await bar.boundingBox();
-    expect(barBox?.y ?? 0).toBeGreaterThan(800 / 2);
-
-    await expect
-      .poll(async () => {
-        const currentBar = await bar.boundingBox();
-        const panel = await dialog.boundingBox();
-        return (
-          (currentBar?.x ?? 0) + (currentBar?.width ?? 0) <= (panel?.x ?? 0)
-        );
-      })
-      .toBe(true);
-
-    await page.getByRole("button", { name: "Afficher à gauche" }).click();
-
-    await expect
-      .poll(async () => {
-        const movedBar = await bar.boundingBox();
-        const movedPanel = await dialog.boundingBox();
-        return (
-          (movedBar?.x ?? 0) >=
-          (movedPanel?.x ?? 0) + (movedPanel?.width ?? 0)
-        );
-      })
-      .toBe(true);
-  });
 });
 
 test.describe("small landscape viewport", () => {
@@ -130,30 +94,5 @@ test.describe("portrait viewport", () => {
     await page.mouse.up();
 
     await expect(page.getByRole("dialog")).toBeHidden();
-  });
-
-  test("pins the fuel filters above the station sheet", async ({ page }) => {
-    await openStation(page);
-
-    const above = page.getByTestId("sheet-above");
-    const content = page.getByTestId("sheet-content");
-
-    await expect(above).toBeVisible();
-    await expect(above.getByRole("button", { name: "E85" })).toBeVisible();
-    await expect(page.getByTestId("fuel-filter-dock")).toHaveCount(0);
-
-    // Wait for the entrance animation to finish before comparing positions.
-    await expect
-      .poll(async () => {
-        const box = await content.boundingBox();
-        return box ? Math.round(box.y + box.height) : 0;
-      })
-      .toBeLessThan(805);
-
-    const aboveBox = await above.boundingBox();
-    const contentBox = await content.boundingBox();
-    expect((aboveBox?.y ?? 0) + (aboveBox?.height ?? 0)).toBeLessThanOrEqual(
-      contentBox?.y ?? 0,
-    );
   });
 });

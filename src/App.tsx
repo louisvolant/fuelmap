@@ -228,6 +228,7 @@ export default function App() {
         <RadarMarkers data={radars} />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-2 p-3">
+          <FuelFilterBar />
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ListButton />
             <FiltersButton />
@@ -244,30 +245,6 @@ export default function App() {
           <RoutePanel />
           <MaxPriceBanner />
         </div>
-
-        {/* Fuel filters dock at the bottom: centered on the map, shifted away
-            from the station side panel, and pinned above the bottom sheet. */}
-        {!(presentation === "sheet" && selectedStation) && (
-          <div
-            data-testid="fuel-filter-dock"
-            className="pointer-events-none absolute inset-x-0 z-30 flex justify-center transition-[padding] duration-300 ease-out"
-            style={{
-              bottom: "calc(4.5rem + env(safe-area-inset-bottom))",
-              paddingLeft:
-                12 +
-                (presentation === "panel" && selectedStation && panelSide === "left"
-                  ? PANEL_WIDTH
-                  : 0),
-              paddingRight:
-                12 +
-                (presentation === "panel" && selectedStation && panelSide === "right"
-                  ? PANEL_WIDTH
-                  : 0),
-            }}
-          >
-            <FuelFilterBar />
-          </div>
-        )}
 
         {/* Own map controls, stacked above MapLibre's zoom control and attribution. */}
         <div className="pointer-events-none absolute right-3 bottom-30 z-20 flex flex-col items-center gap-2">
@@ -307,7 +284,6 @@ export default function App() {
           station={selectedStation}
           country={country}
           onClose={() => selectStation(null)}
-          above={presentation === "sheet" ? <FuelFilterBar /> : undefined}
         />
       </div>
     </MapContext.Provider>

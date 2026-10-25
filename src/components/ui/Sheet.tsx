@@ -6,8 +6,6 @@ interface SheetProps {
   open: boolean;
   title: string;
   onClose: () => void;
-  /** Optional content pinned above the sheet, moving with its animation. */
-  above?: ReactNode;
   children: ReactNode;
 }
 
@@ -16,7 +14,7 @@ interface SheetProps {
  * Slides up from the bottom (CSS animation) and can be dismissed by dragging the
  * handle down, in addition to the close button.
  */
-export function Sheet({ open, title, onClose, above, children }: SheetProps) {
+export function Sheet({ open, title, onClose, children }: SheetProps) {
   const { t } = useTranslation();
 
   const { offset, dragging, handlers } = useDragToDismiss({
@@ -40,52 +38,38 @@ export function Sheet({ open, title, onClose, above, children }: SheetProps) {
         className="sheet-backdrop-enter absolute inset-0 cursor-default bg-slate-900/40"
       />
       <div
-        data-testid="sheet-panel"
+        data-testid="sheet-content"
         style={
           dragging
             ? { transform: `translateY(${offset}px)`, transition: "none" }
             : undefined
         }
-        className="sheet-enter relative flex max-h-[85%] flex-col"
+        className="sheet-enter relative max-h-[85%] overflow-y-auto rounded-t-2xl bg-white px-4 pt-1 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl dark:bg-slate-900 dark:text-slate-100"
       >
-        {above ? (
-          <div
-            data-testid="sheet-above"
-            className="pointer-events-auto mb-2 shrink-0 px-3"
-          >
-            {above}
-          </div>
-        ) : null}
-
+        {/* Drag handle: swipe down to dismiss. */}
         <div
-          data-testid="sheet-content"
-          className="relative min-h-0 overflow-y-auto rounded-t-2xl bg-white px-4 pt-1 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl dark:bg-slate-900 dark:text-slate-100"
+          data-testid="sheet-handle"
+          {...handlers}
+          className="mx-auto mb-1 flex h-6 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
         >
-          {/* Drag handle: swipe down to dismiss. */}
-          <div
-            data-testid="sheet-handle"
-            {...handlers}
-            className="mx-auto mb-1 flex h-6 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
-          >
-            <span
-              aria-hidden
-              className="h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600"
-            />
-          </div>
-
-          <header className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold">{title}</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("common.close")}
-              className="rounded-full px-2 py-1 text-xl leading-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              ×
-            </button>
-          </header>
-          {children}
+          <span
+            aria-hidden
+            className="h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600"
+          />
         </div>
+
+        <header className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="rounded-full px-2 py-1 text-xl leading-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            ×
+          </button>
+        </header>
+        {children}
       </div>
     </div>
   );

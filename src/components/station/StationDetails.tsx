@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { CountryDefinition, NormalizedStation } from "@/countries/types";
 import { FavoriteToggle } from "@/components/favorites/FavoriteToggle";
@@ -18,8 +18,6 @@ interface StationDetailsProps {
   station: NormalizedStation | null;
   country: CountryDefinition;
   onClose: () => void;
-  /** Content pinned above the bottom sheet, moving with it. */
-  above?: ReactNode;
   /** Distance from the user, in meters, when known. */
   distance?: number;
 }
@@ -32,7 +30,6 @@ export function StationDetails({
   station,
   country,
   onClose,
-  above,
   distance,
 }: StationDetailsProps) {
   const { t, i18n } = useTranslation();
@@ -127,7 +124,7 @@ export function StationDetails({
 
   if (presentation === "sheet") {
     return (
-      <Sheet open onClose={onClose} title={title} above={above}>
+      <Sheet open onClose={onClose} title={title}>
         {content}
       </Sheet>
     );
