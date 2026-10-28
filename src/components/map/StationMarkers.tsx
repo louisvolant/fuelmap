@@ -126,6 +126,7 @@ export function StationMarkers({
 
     const ensureLayers = () => {
       try {
+        let createdSource = false;
         if (!map.getSource(SOURCE_ID)) {
           map.addSource(SOURCE_ID, {
             type: "geojson",
@@ -134,6 +135,7 @@ export function StationMarkers({
             clusterRadius: 50,
             clusterMaxZoom: CLUSTER_MAX_ZOOM,
           });
+          createdSource = true;
         }
 
         if (!map.getLayer(CLUSTER_LAYER)) {
@@ -283,7 +285,12 @@ export function StationMarkers({
           });
         }
 
-        applyData();
+        // Only push the data when the source was just (re)created. `setData`
+        // replaces the whole collection and MapLibre re-parses and re-clusters
+        // every feature: doing that on each `idle` (i.e. after every pan) is what
+        // made dragging the map feel heavy. Fresh data is pushed by the effect
+        // that watches `data` instead.
+        if (createdSource) applyData();
 
         // Images belong to the style: re-register them after a style swap.
         void ensurePricePillImage(map);
