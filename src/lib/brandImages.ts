@@ -191,6 +191,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {  return new Promise
 }
 
 /**
+ * 2D context tuned for logo processing: every caller draws and then reads the
+ * pixels back, and `willReadFrequently` keeps the canvas in CPU memory instead
+ * of paying a GPU→CPU readback stall per logo (and silences the browser warning).
+ */
+function logoContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Canvas 2D context unavailable");
+  return context;
+}
+
+/**
  * Draw an image `contain`ed in a square, then normalise it for the round bubble.
  *
  * The artwork is first drawn in the `LOGO_FIT` box, and — when it still reaches
@@ -203,8 +214,7 @@ function toSquareImageData(image: HTMLImageElement, size = LOGO_SIZE): ImageData
   canvas.width = size;
   canvas.height = size;
 
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas 2D context unavailable");
+  const context = logoContext(canvas);
 
   const width = image.naturalWidth || size;
   const height = image.naturalHeight || size;
@@ -253,8 +263,7 @@ function toImageData(image: HTMLImageElement): ImageData {
   canvas.width = width;
   canvas.height = height;
 
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas 2D context unavailable");
+  const context = logoContext(canvas);
   context.drawImage(image, 0, 0, width, height);
   return context.getImageData(0, 0, width, height);
 }
@@ -343,8 +352,7 @@ export async function normalizeLogoForBadge(
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
-    const context = canvas.getContext("2d");
-    if (!context) return null;
+    const context = logoContext(canvas);
 
     const width = image.naturalWidth || size;
     const height = image.naturalHeight || size;
