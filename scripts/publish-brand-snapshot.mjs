@@ -27,6 +27,10 @@
 // nothing. Use `--allow-empty` only to deliberately publish an empty area.
 //
 // Run with: npm run brands:snapshot -- [options]
+//
+// `--offline --resume` publishes the checkpoint as it stands, without querying
+// Overpass: useful during a long mirror outage, when partial coverage (uncovered
+// areas keep using the live path) still beats waiting.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -356,6 +360,13 @@ async function main() {
   const outDir = resolve(process.cwd(), String(args.out ?? "./brand-snapshot"));
   const maxRecords = args["max-records"] ? Number(args["max-records"]) : Infinity;
   const resume = Boolean(args.resume);
+  /**
+   * Publish what the checkpoint already holds, without touching Overpass. Meant
+   * for a long upstream outage: the crawl covered part of the country and that
+   * partial coverage is strictly better than nothing, since uncovered areas keep
+   * using the live path.
+   */
+  const offline = Boolean(args.offline);
   mkdirSync(outDir, { recursive: true });
 
   // Checkpoint: stations once, OSM nodes incrementally, completed tile indexes
@@ -371,6 +382,9 @@ async function main() {
     done = checkpoint.done;
     console.log(`resuming: ${stations.length} stations, ${done.size} tiles done`);
   } else {
+    if (offline) {
+      throw new Error("--offline needs a checkpoint: run with --resume");
+    }
     if (resume) console.log("no checkpoint found, starting fresh…");
     console.log(`fetching DGCCRF coordinates…`);
     const all = await fetchDgccrf(fetch, maxRecords);
@@ -385,14 +399,22 @@ async function main() {
   const tiles = splitBbox(bbox, tileStep);
   const inhabited = new Set(tilesWithStations(tiles, stations));
   const skipped = tiles.length - inhabited.size;
-  const pending = tiles
-    .map((tile, index) => ({ tile, index }))
-    .filter(({ tile, index }) => inhabited.has(tile) && !done.has(index));
+  const pending = offline
+    ? []
+    : tiles
+        .map((tile, index) => ({ tile, index }))
+        .filter(({ tile, index }) => inhabited.has(tile) && !done.has(index));
   const jobs = Math.max(1, Number(args.jobs ?? 6));
   const timeoutMs = Number(args["timeout-ms"] ?? 30_000);
-  console.log(
-    `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel, ${skipped} empty skipped)…`,
-  );
+  if (offline) {
+    console.log(
+      `offline: publishing the checkpoint (${done.size}/${inhabited.size} inhabited tiles, ${pending.length} pending left alone)`,
+    );
+  } else {
+    console.log(
+      `querying ${pending.length}/${tiles.length} Overpass tiles (${jobs} parallel, ${skipped} empty skipped)…`,
+    );
+  }
   const failedTiles = [];
   let visited = 0;
   const onShutdown = () => {
@@ -435,7 +457,7 @@ async function main() {
 
   console.log(`…${nodes.length} OSM nodes, ${failedTiles.length} failed tiles`);
 
-  if (failedTiles.length > 0 && !args["allow-partial"]) {
+  if (failedTiles.length > 0 && !args["allow-partial"] && !offline) {
     console.error(
       `refusing to publish: ${failedTiles.length} tile(s) missed Overpass data (a partial snapshot would drop brands)`,
     );
@@ -448,7 +470,8 @@ async function main() {
     return;
   }
   const coverage = {
-    partial: failedTiles.length > 0,
+    // Accurate in both modes: `--offline` fails no tile, yet is still partial.
+    partial: done.size < inhabited.size,
     tilesDone: done.size,
     tilesTotal: tiles.length,
   };

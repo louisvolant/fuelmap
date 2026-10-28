@@ -130,7 +130,13 @@ French government fuel-price open data.
   tiles (parallel `--jobs`, empty tiles skipped, 30 s hung-mirror timeout).
   With `--allow-partial`, tiles fetched so far are published right away
   (`partial: true` in the manifest) — missing areas keep the live OSM path,
-  so partial coverage strictly helps.
+  so partial coverage strictly helps. `--offline --resume` publishes the
+  checkpoint as it stands **without querying Overpass at all**, which is the
+  only option during a long mirror outage; brands for an area can also be
+  filled offline from a Geofabrik `.osm.pbf` extract with
+  `scripts/extract-osm-fuel-nodes.py` (see the header of that script).
+  The Worker edge-caches the payload under the R2 object's **etag**, so a
+  republish is visible on the next request instead of after the cache TTL.
   Enrichment is encapsulated inside `useCountryStations`
   via `CountryDefinition.needsBrandEnrichment`, keeping the UI and map layers completely
   country-agnostic. Only used for France; Spain (`Rótulo`) and Germany (`brand`)

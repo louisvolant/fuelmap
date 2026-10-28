@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -199,5 +200,36 @@ describe("publish-brand-snapshot", () => {
     expect(loadCheckpoint(outDir)?.nodes).toEqual([
       { key: "node/1", brand: "Total" },
     ]);
+  });
+
+  it("publishes the checkpoint as-is with --offline, without querying Overpass", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "snapshot-offline-"));
+    saveStationsCheckpoint(outDir, [{ id: "FR:1", lat: 48.85, lon: 2.35 }]);
+    appendTileNodes(outDir, [
+      { key: "node/1", lat: 48.85, lon: 2.35, brand: "Total" },
+    ]);
+    // The single tile of this bbox is done: the crawl is complete here.
+    saveDoneCheckpoint(outDir, new Set([0]));
+
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/publish-brand-snapshot.mjs",
+        "--offline",
+        "--resume",
+        "--bbox",
+        "2,48,3,49",
+        "--tile",
+        "1",
+        "--out",
+        outDir,
+      ],
+      { cwd: process.cwd(), stdio: "pipe", timeout: 20_000 },
+    );
+
+    const snapshot = JSON.parse(readFileSync(join(outDir, "snapshot.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync(join(outDir, "manifest.json"), "utf8"));
+    expect(Object.keys(snapshot.brands)).toEqual(["FR:1"]);
+    expect(manifest).toMatchObject({ version: "v1", count: 1, partial: false });
   });
 });

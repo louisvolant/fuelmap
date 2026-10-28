@@ -34,3 +34,9 @@ playwright-report
 blob-report
 test-results
 .playwright/
+
+# Brand snapshot build output. The crawl checkpoint is kept: it is the only
+# source for the published snapshot while Overpass is unreachable. The generated
+# payloads are not, they live in R2 (`brands-resolutions/v1/`).
+brand-snapshot/snapshot.json
+brand-snapshot/manifest.json
