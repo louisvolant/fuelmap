@@ -351,6 +351,8 @@ interface R2ObjectBodyLike {
   body: ReadableStream;
   httpMetadata?: { contentType?: string };
   customMetadata?: Record<string, string>;
+  /** Changes on every upload: used to content-address the edge cache. */
+  etag?: string;
   json<T = unknown>(): Promise<T>;
 }
 
@@ -479,35 +481,65 @@ interface DataGouvDataset {
 }
 
 /**
- * Run an Overpass query against the mirrors until one answers.
+ * How long a single mirror may take before it is abandoned.
+ *
+ * Overpass is regularly *stuck* (connections accepted, no answer for minutes)
+ * rather than merely slow. Without a bound, one hung mirror held the Worker
+ * request — and therefore a browser connection — open for as long as Cloudflare
+ * allowed, while the client kept panning and firing more of them.
+ */
+const OSM_MIRROR_TIMEOUT_MS = 9_000;
+
+/** Query one mirror, aborting it after `OSM_MIRROR_TIMEOUT_MS`. */
+async function queryMirror(
+  mirror: string,
+  query: string,
+): Promise<OverpassElement[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OSM_MIRROR_TIMEOUT_MS);
+  try {
+    const response = await fetch(mirror, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+        // Overpass requires a descriptive User-Agent.
+        "user-agent": "FuelMap/1.0 (+https://github.com/louisvolant/fuelmap)",
+      },
+      body: new URLSearchParams({ data: query }).toString(),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`mirror ${mirror} answered ${response.status}`);
+    }
+    const payload = (await response.json()) as OverpassPayload;
+    if (!isTrustworthyOverpassAnswer(payload)) {
+      throw new Error(`mirror ${mirror} answered something untrustworthy`);
+    }
+    return payload.elements ?? [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Run an Overpass query against the mirrors **in parallel** and return the first
+ * trustworthy answer.
+ *
+ * Racing them keeps the worst case at one mirror timeout instead of the sum of
+ * three, and a mirror that is saturated on its own no longer delays the others.
  *
  * Returns `null` when **every** mirror failed, which is deliberately different
  * from `[]` (a box that genuinely holds no fuel station): a transient upstream
  * failure must never be cached as an empty result.
  */
 async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
-  for (const mirror of OSM_MIRRORS) {
-    try {
-      const response = await fetch(mirror, {
-        method: "POST",
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-          accept: "application/json",
-          // Overpass requires a descriptive User-Agent.
-          "user-agent":
-            "FuelMap/1.0 (+https://github.com/louisvolant/fuelmap)",
-        },
-        body: new URLSearchParams({ data: query }).toString(),
-      });
-      if (!response.ok) continue;
-      const payload = (await response.json()) as OverpassPayload;
-      if (isTrustworthyOverpassAnswer(payload)) {
-        return payload.elements ?? [];
-      }    } catch {
-      // Try the next mirror.
-    }
+  try {
+    return await Promise.any(OSM_MIRRORS.map((mirror) => queryMirror(mirror, query)));
+  } catch {
+    // Every mirror failed or timed out.
+    return null;
   }
-  return null;
 }
 
 /**
@@ -682,14 +714,21 @@ async function handleBrandSnapshot(
   }
 
   if (url.pathname === "/api/fr/brands/snapshot") {
-    const cacheKey = new Request(BRAND_SNAPSHOT_CACHE_KEY, { method: "GET" });
-    const cached = await caches.default.match(cacheKey);
-    if (cached) return cached;
-
     const stored = await env.BRANDS_BUCKET.get(BRAND_SNAPSHOT_KEY);
     if (!stored) {
       return json({ message: "brand snapshot not published" }, 404);
     }
+
+    // The cache key carries the object's etag, so it is **content-addressed**: a
+    // republished snapshot is picked up on the next request instead of waiting
+    // for the TTL, and a stale payload can never outlive its publish.
+    const cacheKey = new Request(
+      `${BRAND_SNAPSHOT_CACHE_KEY}?v=${encodeURIComponent(stored.etag ?? "unknown")}`,
+      { method: "GET" },
+    );
+    const cached = await caches.default.match(cacheKey);
+    if (cached) return cached;
+
     // Read once (the R2 body stream is single-use), then serve and cache.
     const payload = JSON.stringify(await stored.json());
     const headers = {

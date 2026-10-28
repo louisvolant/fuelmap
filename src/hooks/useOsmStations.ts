@@ -45,6 +45,10 @@ export function useOsmStations(
     enabled: country === "FR" && bounds !== null,
     staleTime: CACHE_TTL_MS,
     refetchOnWindowFocus: false,
+    // One attempt only: the Worker bounds each mirror at 9 s, so a retry would
+    // keep a panning user waiting (and a connection busy) for nothing. A failed
+    // tile falls back to the brand overlay and is refetched on the next visit.
+    retry: false,
     queryFn: async () => {
       if (!bounds) return [];
       const metaKey = `osmStations:${OSM_CACHE_VERSION}:${key}`;

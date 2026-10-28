@@ -17,10 +17,13 @@ const LAST_GOOD_KEY = "osm-last-good/3/2.40,48.80,2.50,48.83";
 interface StoredObject {
   value: string;
   options?: { customMetadata?: Record<string, string> };
+  /** Changes on every put, like R2's etag. */
+  etag?: string;
 }
 
 function makeBucket() {
   const store = new Map<string, StoredObject>();
+  let uploads = 0;
   return {
     store,
     async get(key: string) {
@@ -30,16 +33,19 @@ function makeBucket() {
         body: new Response(entry.value).body,
         httpMetadata: { contentType: "application/json" },
         customMetadata: entry.options?.customMetadata ?? {},
+        etag: entry.etag,
         json: async () => JSON.parse(entry.value),
       };
     },
     async put(key: string, value: unknown, options?: StoredObject["options"]) {
+      uploads += 1;
       store.set(key, {
         value:
           typeof value === "string"
             ? value
             : new TextDecoder().decode(value as Uint8Array),
         options,
+        etag: `etag-${uploads}`,
       });
       return {};
     },
@@ -102,6 +108,58 @@ beforeEach(() => {
   vi.stubGlobal("caches", { default: { match: cacheMatch, put: cachePut } });
 });
 
+describe("GET /api/fr/brands/snapshot", () => {
+  const SNAPSHOT_KEY = "brands-resolutions/v1/snapshot.json";
+
+  /** In-memory stand-in for the edge cache, keyed by request URL. */
+  function memoryCache() {
+    const entries = new Map<string, string>();
+    return {
+      entries,
+      match: vi.fn(async (request: Request) => {
+        const body = entries.get(request.url);
+        return body === undefined ? undefined : new Response(body);
+      }),
+      put: vi.fn(async (request: Request, response: Response) => {
+        entries.set(request.url, await response.text());
+      }),
+    };
+  }
+
+  function snapshot(brands: Record<string, unknown>) {
+    return JSON.stringify({ version: "v1", updatedAt: 1, brands });
+  }
+
+  it("picks up a republished snapshot instead of the stale cached copy", async () => {
+    const bucket = makeBucket();
+    const cache = memoryCache();
+    vi.stubGlobal("caches", { default: { match: cache.match, put: cache.put } });
+    const env = makeEnv(bucket);
+    const request = new Request(
+      "https://fuelmap.example/api/fr/brands/snapshot",
+    );
+
+    bucket.store.set(SNAPSHOT_KEY, {
+      value: snapshot({ "FR:1": { brand: "Total", lat: 1, lon: 1 } }),
+      etag: "v1",
+    });
+    const first = await worker.fetch(request, env, makeContext());
+    expect(JSON.stringify(await first.json())).toContain("FR:1");
+    await vi.waitFor(() => expect(cache.entries.size).toBe(1));
+
+    // Republish: same key, new bytes → new etag → the cached copy must not win.
+    bucket.store.set(SNAPSHOT_KEY, {
+      value: snapshot({
+        "FR:1": { brand: "Total", lat: 1, lon: 1 },
+        "FR:2": { brand: "BP", lat: 2, lon: 2 },
+      }),
+      etag: "v2",
+    });
+    const second = await worker.fetch(request, env, makeContext());
+    expect(JSON.stringify(await second.json())).toContain("FR:2");
+  });
+});
+
 describe("GET /api/osm/v3/stations", () => {
   it("serves the last good payload from R2 when every mirror is down", async () => {
     const bucket = makeBucket();
@@ -144,6 +202,78 @@ describe("GET /api/osm/v3/stations", () => {
     expect(response.status).toBe(502);
     expect(cachePut).not.toHaveBeenCalled();
     expect([...bucket.store.keys()]).toEqual([]);
+  });
+
+  it("races the mirrors and keeps the first trustworthy answer", async () => {
+    const bucket = makeBucket();
+    const contacted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        contacted.push(url);
+        if (url.includes("overpass-api.de")) throw new Error("saturated");
+        if (url.includes("kumi")) return new Response("busy", { status: 500 });
+        return new Response(
+          JSON.stringify({
+            elements: [
+              {
+                type: "node",
+                id: 7,
+                lat: 48.81,
+                lon: 2.45,
+                tags: { amenity: "fuel", brand: "BP" },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    const response = await worker.fetch(
+      new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+      makeEnv(bucket),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(200);
+    // All three were asked at once: a saturated mirror no longer delays the rest.
+    expect(new Set(contacted).size).toBe(3);
+    const payload = (await response.json()) as {
+      stations: { brand: string }[];
+    };
+    expect(payload.stations[0].brand).toBe("BP");
+  });
+
+  it("abandons a mirror that accepts the request but never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      const bucket = makeBucket();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_input: RequestInfo | URL, init?: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init?.signal?.addEventListener("abort", () =>
+                reject(new Error("aborted")),
+              );
+            }),
+        ),
+      );
+
+      const pending = worker.fetch(
+        new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+        makeEnv(bucket),
+        makeContext(),
+      );
+      await vi.advanceTimersByTimeAsync(9_000);
+      const response = await pending;
+
+      expect(response.status).toBe(502);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the payload in R2 after a successful query", async () => {
