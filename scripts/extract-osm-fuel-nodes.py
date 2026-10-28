@@ -11,11 +11,10 @@ a regional extract (https://download.geofabrik.de/europe/france/) and turn its
     python3 scripts/extract-osm-fuel-nodes.py ile-de-france-latest.osm.pbf \
       >> brand-snapshot/nodes.jsonl
 
-Then mark the tiles the extract fully covers as done in
-`brand-snapshot/tiles-done.json` and republish with `--offline --resume`
-(partially covered edge tiles must stay pending, so a later crawl still fills
-their remainder). A truncated download is still usable: PBF stores nodes before
-ways, so the fuel nodes survive.
+Then mark the tiles the extract covers with `scripts/tile-coverage.py` (it only
+marks tiles fully inside the region polygons, so a later crawl still fills the
+edges) and republish with `--offline --resume`. A truncated download is still
+usable: PBF stores nodes before ways, so the fuel nodes survive.
 """
 
 import json

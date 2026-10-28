@@ -133,8 +133,9 @@ French government fuel-price open data.
   so partial coverage strictly helps. `--offline --resume` publishes the
   checkpoint as it stands **without querying Overpass at all**, which is the
   only option during a long mirror outage; brands for an area can also be
-  filled offline from a Geofabrik `.osm.pbf` extract with
-  `scripts/extract-osm-fuel-nodes.py` (see the header of that script).
+  filled offline from Geofabrik `.osm.pbf` extracts with
+  `scripts/extract-osm-fuel-nodes.py`, then `scripts/tile-coverage.py` marks the
+  tiles they cover (see the header of each script).
   The Worker edge-caches the payload under the R2 object's **etag**, so a
   republish is visible on the next request instead of after the cache TTL.
   Enrichment is encapsulated inside `useCountryStations`
