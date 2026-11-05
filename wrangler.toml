@@ -28,6 +28,11 @@ not_found_handling = "single-page-application"
 TANKERKOENIG_API_URL = "https://creativecommons.tankerkoenig.de/json/list.php"
 BRANDFETCH_API_URL = "https://api.brandfetch.io/v2/brands"
 
+# Observability settings: capture invocation logs while disabling general log persistence.
+[observability.logs]
+enabled = false
+invocation_logs = true
+
 # R2 cache bucket. It holds:
 #  - the brand logos snapshotted from the Brandfetch Brand API (prefix
 #    `brands-logo/`); Brandfetch's terms allow caching for 30 days and the cron

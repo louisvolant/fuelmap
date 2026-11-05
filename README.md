@@ -415,7 +415,9 @@ GeoJSON (`BRANDS_BUCKET` → `fuelmap-bucket`) and the **cron trigger** that
 refreshes them.
 
 `wrangler.toml` sets **`keep_vars = true`** so environment variables configured
-in the dashboard survive every deploy.
+in the dashboard survive every deploy. It also configures Worker observability
+(`[observability.logs]`, `enabled = false`, `invocation_logs = true`) to capture
+invocation logs in Cloudflare while disabling general log persistence.
 
 France and Spain need no backend: their APIs send permissive CORS headers and
 are queried directly by the browser.

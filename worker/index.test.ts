@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "./index";
 
@@ -563,5 +565,16 @@ describe("French fixed radars", () => {
 
     expect(response.status).toBe(502);
     expect([...bucket.store.keys()]).toEqual([]);
+  });
+});
+
+describe("Wrangler observability configuration", () => {
+  it("enables invocation logs while disabling general log persistence", () => {
+    const tomlPath = resolve(__dirname, "../wrangler.toml");
+    const tomlContent = readFileSync(tomlPath, "utf-8");
+
+    expect(tomlContent).toMatch(/\[observability\.logs\]/);
+    expect(tomlContent).toMatch(/enabled\s*=\s*false/);
+    expect(tomlContent).toMatch(/invocation_logs\s*=\s*true/);
   });
 });
