@@ -142,8 +142,11 @@ French government fuel-price open data.
   checkpoint as it stands **without querying Overpass at all**, which is the
   only option during a long mirror outage; brands for an area can also be
   filled offline from Geofabrik `.osm.pbf` extracts with
-  `scripts/extract-osm-fuel-nodes.py`, then `scripts/tile-coverage.py` marks the
-  tiles they cover (see the header of each script).
+  `scripts/extract-osm-fuel-nodes.py` (truncated `.osm.pbf` downloads fail by
+  default — pass `--allow-truncated` only as an emergency fallback — so partial
+  `ways` sections never silently strip polygon fuel stations), then
+  `scripts/tile-coverage.py` marks the tiles they cover (see the header of each
+  script).
   The Worker edge-caches the payload under the R2 object's **etag**, so a
   republish is visible on the next request instead of after the cache TTL.
   Enrichment is encapsulated inside `useCountryStations`

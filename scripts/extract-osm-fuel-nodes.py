@@ -13,8 +13,9 @@ a regional extract (https://download.geofabrik.de/europe/france/) and turn its
 
 Then mark the tiles the extract covers with `scripts/tile-coverage.py` (it only
 marks tiles fully inside the region polygons, so a later crawl still fills the
-edges) and republish with `--offline --resume`. A truncated download is still
-usable: PBF stores nodes before ways, so the fuel nodes survive.
+edges) and republish with `--offline --resume`. Truncated downloads fail by
+default unless `--allow-truncated` is passed (PBF stores nodes before ways, so
+partial reads can strip polygon `way/*` fuel stations).
 """
 
 import json
@@ -72,12 +73,21 @@ class FuelStations(osmium.SimpleHandler):
 
 
 def main():
-    if len(sys.argv) < 2:
-        raise SystemExit("usage: extract-fuel-nodes.py <extract.osm.pbf>")
+    args = sys.argv[1:]
+    allow_truncated = "--allow-truncated" in args
+    paths = [arg for arg in args if arg != "--allow-truncated"]
+    if len(paths) != 1 or any(arg.startswith("-") for arg in paths):
+        raise SystemExit(
+            "usage: extract-osm-fuel-nodes.py [--allow-truncated] <extract.osm.pbf>"
+        )
     handler = FuelStations()
     try:
-        handler.apply_file(sys.argv[1], locations=True)
+        handler.apply_file(paths[0], locations=True)
     except RuntimeError as error:
+        if not allow_truncated:
+            raise SystemExit(
+                f"error: truncated or corrupt PBF ({error}); pass --allow-truncated to keep partial blocks"
+            )
         # A truncated download still yields every block before the cut, and PBF
         # extracts are sorted by type: all nodes come first, so a file cut in the
         # ways section keeps the fuel *nodes* intact. Recover instead of losing it.
