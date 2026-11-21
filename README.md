@@ -120,9 +120,11 @@ French government fuel-price open data.
   Every match records its provenance (`osmKey`, `distanceM`) in the overlay.
   A **precomputed snapshot** (`GET /api/fr/brands/manifest` + `GET
   /api/fr/brands/snapshot`, served from R2 and edge-cached for an hour) covers
-  areas this device never visited: the client hydrates its overlay from it on
-  boot (snapshot wins when newer), so first-time areas skip the Overpass wait
-  once a snapshot is published. An empty manifest (`count: 0`) simply falls
+  areas this device never visited: local IndexedDB resolutions hydrate
+  immediately on boot so remembered brands paint before the network snapshot
+  download finishes, and once the snapshot arrives it merges in (snapshot wins
+  when newer) and backfills IndexedDB, so first-time areas skip the Overpass
+  wait once a snapshot is published. An empty manifest (`count: 0`) simply falls
   back to live OSM enrichment. Publish it offline with
   `npm run brands:snapshot -- --bbox <w,s,e,n> --out ./brand-snapshot` (full
   France by default), then upload both files to
@@ -178,9 +180,11 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 - The **cron** (`0 4 1,16 * *`) is only the compliance net — Brandfetch's terms
   grant a 30-day cache licence that must be renewed by an API call at least every
   30 days — plus a warm-up for brands nobody views.
-- Diagnostics: `/brands/manifest.json` (what is cached, with timestamps, the
-  content type, the asset that was fetched, and `apiKeyConfigured` — a boolean
-  stating whether the Worker can see the Brand API secret) and
+- Diagnostics: `/brands/manifest.json` (what is cached, requesting R2
+  `httpMetadata` and `customMetadata` so verified logos report `"status": "ok"`
+  with timestamps, content type, the asset that was fetched, and
+  `apiKeyConfigured` — a boolean stating whether the Worker can see the Brand
+  API secret) and
   `/brands/report.json` (per-brand status, `ok`, `no_logo`, `api_401`,
   `asset_not_image`…, recorded for both the cron and the lazy refreshes). If
   `apiKeyConfigured` is `false`, the secret is missing or misnamed; if the report
@@ -194,13 +198,14 @@ Brandfetch product whose terms allow caching) into R2 and served by the Worker.
 - The client tries `/brands/<id>` first and falls back to the bundled SVG (brands
   unindexed by Brandfetch like Dyneff, Élan, Fulli, Match serve their dedicated
   vector marks directly without attempting a remote fetch), so it never waits for
-  a third party and keeps working offline. Every bundled mark is also
-  pre-rasterized while the browser is idle (`preloadAllBrandImages`), so a
-  bubble that gains its brand from the overlay draws its logo immediately
-  instead of flashing its price first. The station-details badge shows the
-  bundled mark instantly, then upgrades to the snapshot run through the same
-  normalization (`normalizeLogoForBadge`, CORS-open assets) instead of a raw
-  JPEG that would render as a grey disc.
+  a third party and keeps working offline. Every bundled mark and remote badge
+  logo is also pre-normalized while the browser is idle (`preloadAllBrandImages`),
+  so a bubble that gains its brand from the overlay draws its logo immediately
+  instead of flashing its price first. Normalized station-detail badge data URLs
+  are cached in memory across panel opens (`normalizeLogoForBadge` /
+  `getCachedBadgeLogo`), so reopening a station renders the normalized snapshot
+  on the first frame instead of flashing the bundled mark or re-running canvas
+  normalization.
 - **Every logo is normalised for the round bubble** (`src/lib/brandImages.ts`).
   Brandfetch serves most brands as **JPEG**, which has no alpha channel, so a
   transparent logo comes back baked on a white (or light-grey) square whose

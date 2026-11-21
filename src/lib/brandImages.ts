@@ -27,6 +27,10 @@ const LOGO_FIT = 0.88;
 const imageDataCache = new Map<BrandId, ImageData>();
 /** In-flight loads, shared so idle preload and marker registration never double-fetch. */
 const loadingPromises = new Map<BrandId, Promise<ImageData>>();
+/** Normalized PNG data URLs for `<BrandBadge>` so reopening StationDetails renders immediately. */
+const badgeDataUrlCache = new Map<string, string>();
+/** In-flight badge normalizations, deduplicated per source URL and size. */
+const badgeLoadingPromises = new Map<string, Promise<string | null>>();
 
 /** The part of `ImageData` the logo styliser works on. */
 export interface PixelBuffer {
@@ -320,6 +324,9 @@ export async function preloadAllBrandImages(): Promise<void> {
     ids.map(async (id) => {
       try {
         await loadBrandLogo(id);
+        if (!LOCAL_ONLY_BRANDS.has(id)) {
+          await normalizeLogoForBadge(remoteBrandLogoUrl(id)).catch(() => null);
+        }
       } catch {
         // Best-effort: the mark loads on demand later.
       }
@@ -337,6 +344,11 @@ function loadCorsImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Return a previously normalized badge PNG data URL synchronously, if cached. */
+export function getCachedBadgeLogo(src: string, size = 96): string | undefined {
+  return badgeDataUrlCache.get(`${src}#${size}`);
+}
+
 /**
  * Normalize a remote logo for an `<img>` badge: same pipeline as the map
  * markers (flat-background keying, shrink-to-fit, circular mask), encoded back
@@ -347,51 +359,68 @@ export async function normalizeLogoForBadge(
   src: string,
   size = 96,
 ): Promise<string | null> {
-  try {
-    const image = await loadCorsImage(src);
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const context = logoContext(canvas);
+  const cacheKey = `${src}#${size}`;
+  const cached = badgeDataUrlCache.get(cacheKey);
+  if (cached) return cached;
+  const pending = badgeLoadingPromises.get(cacheKey);
+  if (pending) return pending;
 
-    const width = image.naturalWidth || size;
-    const height = image.naturalHeight || size;
-    const box = size * LOGO_FIT;
-    const scale = Math.min(box / width, box / height);
-    const drawWidth = width * scale;
-    const drawHeight = height * scale;
-    context.drawImage(
-      image,
-      (size - drawWidth) / 2,
-      (size - drawHeight) / 2,
-      drawWidth,
-      drawHeight,
-    );
-    const pixels = context.getImageData(0, 0, size, size);
-    keyLogoBackground(pixels);
-    if (artworkReach(pixels) > ARTWORK_REACH) {
-      // Square artwork: redraw smaller instead of shaving it (same rule as
-      // the markers, single pass is enough for a badge).
-      const shrink = ARTWORK_REACH / artworkReach(pixels);
-      context.clearRect(0, 0, size, size);
+  const loading = (async () => {
+    try {
+      const image = await loadCorsImage(src);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = logoContext(canvas);
+
+      const width = image.naturalWidth || size;
+      const height = image.naturalHeight || size;
+      const box = size * LOGO_FIT;
+      const scale = Math.min(box / width, box / height);
+      const drawWidth = width * scale;
+      const drawHeight = height * scale;
       context.drawImage(
         image,
-        (size - drawWidth * shrink) / 2,
-        (size - drawHeight * shrink) / 2,
-        drawWidth * shrink,
-        drawHeight * shrink,
+        (size - drawWidth) / 2,
+        (size - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
       );
-      const redrawn = context.getImageData(0, 0, size, size);
-      keyLogoBackground(redrawn);
-      maskLogoToCircle(redrawn);
-      context.putImageData(redrawn, 0, 0);
-    } else {
-      maskLogoToCircle(pixels);
-      context.putImageData(pixels, 0, 0);
+      const pixels = context.getImageData(0, 0, size, size);
+      keyLogoBackground(pixels);
+      if (artworkReach(pixels) > ARTWORK_REACH) {
+        // Square artwork: redraw smaller instead of shaving it (same rule as
+        // the markers, single pass is enough for a badge).
+        const shrink = ARTWORK_REACH / artworkReach(pixels);
+        context.clearRect(0, 0, size, size);
+        context.drawImage(
+          image,
+          (size - drawWidth * shrink) / 2,
+          (size - drawHeight * shrink) / 2,
+          drawWidth * shrink,
+          drawHeight * shrink,
+        );
+        const redrawn = context.getImageData(0, 0, size, size);
+        keyLogoBackground(redrawn);
+        maskLogoToCircle(redrawn);
+        context.putImageData(redrawn, 0, 0);
+      } else {
+        maskLogoToCircle(pixels);
+        context.putImageData(pixels, 0, 0);
+      }
+      const dataUrl = canvas.toDataURL("image/png");
+      badgeDataUrlCache.set(cacheKey, dataUrl);
+      return dataUrl;
+    } catch {
+      return null;
     }
-    return canvas.toDataURL("image/png");
-  } catch {
-    return null;
+  })();
+
+  badgeLoadingPromises.set(cacheKey, loading);
+  try {
+    return await loading;
+  } finally {
+    badgeLoadingPromises.delete(cacheKey);
   }
 }
 

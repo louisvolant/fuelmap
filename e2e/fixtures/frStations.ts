@@ -18,6 +18,9 @@ export interface FrStationFixture {
   [key: string]: unknown;
 }
 
+const hoursAgo = (hours: number): string =>
+  new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
 export const FR_STATIONS_FIXTURE: FrStationFixture[] = [
   {
     id: 75101001,
@@ -29,11 +32,11 @@ export const FR_STATIONS_FIXTURE: FrStationFixture[] = [
     services_service: ["Boutique", "Wifi"],
     horaires_automate_24_24: "Non",
     gazole_prix: 1.859,
-    gazole_maj: "2026-10-12 08:00:00",
+    gazole_maj: hoursAgo(2),
     e10_prix: 1.799,
-    e10_maj: "2026-10-12 08:00:00",
+    e10_maj: hoursAgo(2),
     sp98_prix: 1.929,
-    sp98_maj: "2026-10-11 18:00:00",
+    sp98_maj: hoursAgo(16),
     sp95_rupture_type: "definitive",
     sp95_rupture_debut: "2026-01-01 00:00:00",
   },
@@ -47,11 +50,11 @@ export const FR_STATIONS_FIXTURE: FrStationFixture[] = [
     services_service: ["DAB (Distributeur automatique de billets)"],
     horaires_automate_24_24: "Oui",
     gazole_prix: 1.829,
-    gazole_maj: "2026-10-12 07:30:00",
+    gazole_maj: hoursAgo(3),
     e10_prix: 1.769,
-    e10_maj: "2026-10-12 07:30:00",
+    e10_maj: hoursAgo(3),
     sp95_prix: 1.809,
-    sp95_maj: "2026-10-12 07:30:00",
+    sp95_maj: hoursAgo(3),
   },
   {
     id: 75103003,
@@ -63,7 +66,7 @@ export const FR_STATIONS_FIXTURE: FrStationFixture[] = [
     services_service: ["Boutique", "Toilettes publiques"],
     horaires_automate_24_24: "Oui",
     gazole_prix: 1.899,
-    gazole_maj: "2026-10-12 09:15:00",
+    gazole_maj: hoursAgo(1),
   },
   {
     id: 75104004,
@@ -75,8 +78,8 @@ export const FR_STATIONS_FIXTURE: FrStationFixture[] = [
     services_service: ["Boutique"],
     horaires_automate_24_24: "Non",
     e85_prix: 0.899,
-    e85_maj: "2026-10-10 12:00:00",
+    e85_maj: hoursAgo(44),
     gplc_prix: 1.099,
-    gplc_maj: "2026-10-10 12:00:00",
+    gplc_maj: hoursAgo(44),
   },
 ];

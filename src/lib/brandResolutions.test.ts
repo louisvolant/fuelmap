@@ -50,10 +50,14 @@ describe("brandResolutions", () => {
     expect(result[2].brand).toBeUndefined();
   });
 
-  it("ignores resolutions for stations that moved since resolution", () => {
-    const stations = [{ id: "FR:1", brand: undefined, lat: 48.9, lon: 2.4 }];
-    const resolutions = new Map([["FR:1", makeResolution()]]);
-    expect(applyBrandResolutions(stations, resolutions)[0].brand).toBeUndefined();
+  it("preserves resolutions across minor coordinate jitter and drops large shifts", () => {
+    const resolutions = new Map([["FR:1", makeResolution({ lat: 48.85, lon: 2.35 })]]);
+
+    const jittered = [{ id: "FR:1", brand: undefined, lat: 48.851, lon: 2.351 }];
+    expect(applyBrandResolutions(jittered, resolutions)[0].brand).toBe("TotalEnergies");
+
+    const relocated = [{ id: "FR:1", brand: undefined, lat: 48.853, lon: 2.35 }];
+    expect(applyBrandResolutions(relocated, resolutions)[0].brand).toBeUndefined();
   });
 
   it("collects only newly branded stations for persistence", () => {

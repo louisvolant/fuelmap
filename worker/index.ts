@@ -253,7 +253,10 @@ async function handleBrandAsset(
   }
 
   if (name === "manifest.json") {
-    const list = await env.BRANDS_BUCKET.list({ prefix: BRAND_LOGO_PREFIX });
+    const list = await env.BRANDS_BUCKET.list({
+      prefix: BRAND_LOGO_PREFIX,
+      include: ["httpMetadata", "customMetadata"],
+    });
     const brands = list.objects
       .filter((object) => object.key !== BRAND_LOGO_MANIFEST && object.key !== BRAND_LOGO_REPORT)
       .map((object) => {
@@ -367,7 +370,10 @@ interface R2BucketLike {
     },
   ): Promise<unknown>;
   delete(key: string): Promise<unknown>;
-  list(options?: { prefix?: string }): Promise<{
+  list(options?: {
+    prefix?: string;
+    include?: ("httpMetadata" | "customMetadata")[];
+  }): Promise<{
     objects: {
       key: string;
       httpMetadata?: { contentType?: string };

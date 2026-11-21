@@ -18,22 +18,27 @@ const LAST_GOOD_KEY = "osm-last-good/3/2.40,48.80,2.50,48.83";
 
 interface StoredObject {
   value: string;
-  options?: { customMetadata?: Record<string, string> };
+  options?: {
+    httpMetadata?: { contentType?: string; cacheControl?: string };
+    customMetadata?: Record<string, string>;
+  };
   /** Changes on every put, like R2's etag. */
   etag?: string;
 }
 
 function makeBucket() {
   const store = new Map<string, StoredObject>();
+  const listCalls: { prefix?: string; include?: string[] }[] = [];
   let uploads = 0;
   return {
     store,
+    listCalls,
     async get(key: string) {
       const entry = store.get(key);
       if (!entry) return null;
       return {
         body: new Response(entry.value).body,
-        httpMetadata: { contentType: "application/json" },
+        httpMetadata: entry.options?.httpMetadata ?? { contentType: "application/json" },
         customMetadata: entry.options?.customMetadata ?? {},
         etag: entry.etag,
         json: async () => JSON.parse(entry.value),
@@ -54,8 +59,22 @@ function makeBucket() {
     async delete(key: string) {
       store.delete(key);
     },
-    async list() {
-      return { objects: [] };
+    async list(options?: { prefix?: string; include?: string[] }) {
+      listCalls.push(options ?? {});
+      const prefix = options?.prefix ?? "";
+      const include = new Set(options?.include ?? []);
+      const objects = [...store.entries()]
+        .filter(([key]) => key.startsWith(prefix))
+        .map(([key, entry]) => ({
+          key,
+          ...(include.has("httpMetadata")
+            ? { httpMetadata: entry.options?.httpMetadata }
+            : {}),
+          ...(include.has("customMetadata")
+            ? { customMetadata: entry.options?.customMetadata }
+            : {}),
+        }));
+      return { objects };
     },
   };
 }
@@ -373,6 +392,49 @@ describe("brand logo assets", () => {
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  it("includes R2 httpMetadata and customMetadata in /brands/manifest.json", async () => {
+    const bucket = makeBucket();
+    const refreshedAt = 1_700_000_000_000;
+    bucket.store.set("brands-logo/total", {
+      value: "fake-bytes",
+      options: {
+        httpMetadata: { contentType: "image/png" },
+        customMetadata: {
+          verified: "1",
+          refreshedAt: String(refreshedAt),
+          asset: "https://cdn.example/total.png",
+        },
+      },
+    });
+    const response = await worker.fetch(
+      new Request("https://fuelmap.example/brands/manifest.json"),
+      makeEnv(bucket),
+      makeContext(),
+    );
+    expect(response.status).toBe(200);
+    expect(bucket.listCalls).toEqual([
+      { prefix: "brands-logo/", include: ["httpMetadata", "customMetadata"] },
+    ]);
+    const body = (await response.json()) as {
+      brands: {
+        id: string;
+        status: string;
+        contentType: string | null;
+        refreshedAt: number | null;
+        asset: string | null;
+      }[];
+    };
+    expect(body.brands).toEqual([
+      {
+        id: "total",
+        status: "ok",
+        contentType: "image/png",
+        refreshedAt,
+        asset: "https://cdn.example/total.png",
+      },
+    ]);
   });
 });
 

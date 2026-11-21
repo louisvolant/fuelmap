@@ -140,35 +140,53 @@ export function useCountryStations(
 
   // Load the persistent brand overlay once: IndexedDB first (instant), then the
   // precomputed Worker snapshot (covers areas this device never visited), so
-  // logos render before any live OpenStreetMap fetch resolves.
+  // remembered brands render immediately without waiting for the snapshot download.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const [cached, snapshot] = await Promise.all([
-          getAllBrandResolutions(),
-          needsEnrichment ? fetchBrandSnapshot().catch(() => null) : null,
-        ]);
+        const cachedPromise = getAllBrandResolutions();
+        const snapshotPromise = needsEnrichment
+          ? fetchBrandSnapshot().catch(() => null)
+          : Promise.resolve(null);
+
+        const cached = await cachedPromise;
         if (cancelled) return;
         const now = Date.now();
-        const merged = new Map<string, BrandResolution>();
+        const localMap = new Map<string, BrandResolution>();
         for (const resolution of cached) {
           if (isResolutionFresh(resolution, now)) {
-            merged.set(resolution.stationId, resolution);
+            localMap.set(resolution.stationId, resolution);
           }
         }
+        if (localMap.size > 0) {
+          setResolutions((previous) => {
+            const next = new Map(previous);
+            for (const [k, v] of localMap) {
+              const cur = next.get(k);
+              if (!cur || v.resolvedAt >= cur.resolvedAt) next.set(k, v);
+            }
+            return next;
+          });
+        }
+
+        const snapshot = await snapshotPromise;
+        if (cancelled || !snapshot || snapshot.length === 0) return;
         // Snapshot wins when newer: it is the newest offline computation.
-        for (const resolution of snapshot ?? []) {
-          const existing = merged.get(resolution.stationId);
-          if (!existing || resolution.resolvedAt >= existing.resolvedAt) {
-            merged.set(resolution.stationId, resolution);
+        setResolutions((previous) => {
+          const next = new Map(previous);
+          for (const resolution of snapshot) {
+            const existing = next.get(resolution.stationId);
+            if (!existing || resolution.resolvedAt >= existing.resolvedAt) {
+              next.set(resolution.stationId, resolution);
+            }
           }
-        }
-        setResolutions(merged);
+          return next;
+        });
         // Backfill IndexedDB so the snapshot works offline on next boot.
-        const missing = [...merged.values()].filter(
-          (resolution) =>
-            !cached.some((entry) => entry.stationId === resolution.stationId),
+        const cachedIds = new Set(cached.map((entry) => entry.stationId));
+        const missing = snapshot.filter(
+          (resolution) => !cachedIds.has(resolution.stationId),
         );
         if (missing.length > 0) void saveBrandResolutions(missing).catch(() => {});
       } catch {

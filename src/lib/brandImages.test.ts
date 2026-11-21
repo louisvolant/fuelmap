@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   artworkReach,
+  getCachedBadgeLogo,
   keyLogoBackground,
   maskLogoToCircle,
+  normalizeLogoForBadge,
   type PixelBuffer,
 } from "./brandImages";
 
@@ -163,6 +165,75 @@ describe("preloadAllBrandImages", () => {
       for (const id of Object.keys(BRAND_SVGS)) {
         expect(isBrandImageCached(id as never)).toBe(true);
       }
+    } finally {
+      canvasStub.mockRestore();
+      vi.stubGlobal("Image", RealImage);
+    }
+  });
+});
+
+describe("normalizeLogoForBadge", () => {
+  it("caches normalized badge data URLs across repeated calls and exposes them synchronously", async () => {
+    const RealImage = globalThis.Image;
+    let loadCount = 0;
+    vi.stubGlobal(
+      "Image",
+      class {
+        naturalWidth = 64;
+        naturalHeight = 64;
+        crossOrigin: string | null = null;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_value: string) {
+          loadCount += 1;
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+
+    const createElement = document.createElement.bind(document);
+    const canvasStub = vi
+      .spyOn(document, "createElement")
+      .mockImplementation(((tag: string, ...rest: unknown[]) => {
+        if (tag !== "canvas") {
+          return (createElement as (...args: unknown[]) => unknown)(
+            tag,
+            ...rest,
+          ) as Element;
+        }
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => {},
+            clearRect: () => {},
+            putImageData: () => {},
+            getImageData: (width = 96, height = 96) => ({
+              data: new Uint8ClampedArray(width * height * 4).fill(255),
+              width,
+              height,
+            }),
+          }),
+          toDataURL: () => "data:image/png;base64,normalized-badge",
+        } as unknown as Element;
+      }) as unknown as typeof document.createElement);
+
+    const testSrc = "https://example.test/brands/cache-test-logo";
+    try {
+      expect(getCachedBadgeLogo(testSrc)).toBeUndefined();
+
+      const [first, second] = await Promise.all([
+        normalizeLogoForBadge(testSrc),
+        normalizeLogoForBadge(testSrc),
+      ]);
+      expect(first).toBe("data:image/png;base64,normalized-badge");
+      expect(second).toBe(first);
+      expect(loadCount).toBe(1);
+
+      expect(getCachedBadgeLogo(testSrc)).toBe(first);
+      const third = await normalizeLogoForBadge(testSrc);
+      expect(third).toBe(first);
+      expect(loadCount).toBe(1);
     } finally {
       canvasStub.mockRestore();
       vi.stubGlobal("Image", RealImage);

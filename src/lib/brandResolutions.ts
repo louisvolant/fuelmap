@@ -70,7 +70,7 @@ export function stableBboxKey(
 /**
  * Apply cached resolutions to stations that still lack a brand. Pure: returns
  * new objects only for stations that gain a brand. Entries for stations that
- * moved significantly (>50m) are ignored so a stale brand never sticks to a
+ * moved significantly (>150m) are ignored so a stale brand never sticks to a
  * relocated station.
  */
 export function applyBrandResolutions<
@@ -89,8 +89,8 @@ export function applyBrandResolutions<
     }
     // Ignore resolutions computed for a station that has since moved.
     const moved =
-      Math.abs(resolution.lat - station.lat) > 0.0005 ||
-      Math.abs(resolution.lon - station.lon) > 0.0005;
+      Math.abs(resolution.lat - station.lat) > 0.002 ||
+      Math.abs(resolution.lon - station.lon) > 0.002;
     if (moved) return station;
     changed = true;
     return { ...station, brand: resolution.brand };

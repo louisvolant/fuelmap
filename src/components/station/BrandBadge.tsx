@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { normalizeLogoForBadge } from "@/lib/brandImages";
+import { getCachedBadgeLogo, normalizeLogoForBadge } from "@/lib/brandImages";
 import { brandSvgDataUrl, remoteBrandLogoUrl } from "@/lib/brandLogos";
 import { matchBrand, LOCAL_ONLY_BRANDS, type BrandId } from "@/lib/brands";
 
@@ -13,19 +13,23 @@ interface BrandBadgeProps {
 /**
  * Round brand badge used in the station details.
  *
- * Shows the bundled mark instantly, then upgrades to the normalized Worker
- * snapshot (same background-keying + circular-mask pipeline as the map
- * markers, so a flattened JPEG never renders as a grey disc) when it loads.
+ * Shows the normalized Worker snapshot immediately when already cached in
+ * memory, otherwise starts with the bundled mark and upgrades to the
+ * normalized snapshot (same background-keying + circular-mask pipeline as the
+ * map markers, so a flattened JPEG never renders as a grey disc) when it loads.
  * Drawn on a light disc so both light and dark logos stay readable.
  */
 export function BrandBadge({ brand, size = 32, className }: BrandBadgeProps) {
   const id = matchBrand(brand);
+  const remoteSrc =
+    id && !LOCAL_ONLY_BRANDS.has(id) ? remoteBrandLogoUrl(id) : null;
+  const cachedLogo = remoteSrc ? getCachedBadgeLogo(remoteSrc) : undefined;
   const [upgraded, setUpgraded] = useState<Map<BrandId, string>>(new Map());
 
   useEffect(() => {
-    if (!id || LOCAL_ONLY_BRANDS.has(id) || upgraded.has(id)) return;
+    if (!id || !remoteSrc || cachedLogo || upgraded.has(id)) return;
     let cancelled = false;
-    void normalizeLogoForBadge(remoteBrandLogoUrl(id)).then((normalized) => {
+    void normalizeLogoForBadge(remoteSrc).then((normalized) => {
       if (!cancelled && normalized) {
         setUpgraded((previous) => new Map(previous).set(id, normalized));
       }
@@ -33,11 +37,11 @@ export function BrandBadge({ brand, size = 32, className }: BrandBadgeProps) {
     return () => {
       cancelled = true;
     };
-  }, [id, upgraded]);
+  }, [id, remoteSrc, cachedLogo, upgraded]);
 
   if (!id) return null;
   const fallback = brandSvgDataUrl(id);
-  const src = upgraded.get(id) ?? fallback;
+  const src = cachedLogo ?? upgraded.get(id) ?? fallback;
 
   return (
     <img
