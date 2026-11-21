@@ -45,9 +45,11 @@ class FuelStations(osmium.SimpleHandler):
         brand = brand_of(tags)
         if brand:
             self.branded += 1
-        self.items.append(
-            {"key": key, "lat": round(lat, 7), "lon": round(lon, 7), "brand": brand}
-        )
+        item = {"key": key, "lat": round(lat, 7), "lon": round(lon, 7), "brand": brand}
+        ref = tags.get("ref:FR:prix-carburants")
+        if ref:
+            item["ref"] = ref
+        self.items.append(item)
 
     def node(self, node):
         if node.tags.get("amenity") != "fuel":

@@ -321,6 +321,40 @@ describe("GET /api/osm/v3/stations", () => {
     });
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
+
+  it("forwards ref:FR:prix-carburants as ref when present", async () => {
+    const bucket = makeBucket();
+    serveUpstream({
+      elements: [
+        {
+          type: "node",
+          id: 42,
+          lat: 48.807,
+          lon: 2.487,
+          tags: {
+            amenity: "fuel",
+            brand: "Total",
+            "ref:FR:prix-carburants": "94100013",
+          },
+        },
+      ],
+    });
+
+    const response = await worker.fetch(
+      new Request(`https://fuelmap.example${OSM_PATH}${QUERY}`),
+      makeEnv(bucket),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      stations: { key: string; ref?: string }[];
+    };
+    expect(payload.stations[0]).toMatchObject({
+      key: "node/42",
+      ref: "94100013",
+    });
+  });
 });
 
 describe("brand logo assets", () => {

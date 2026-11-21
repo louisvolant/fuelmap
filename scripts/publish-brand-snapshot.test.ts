@@ -58,6 +58,36 @@ describe("publish-brand-snapshot", () => {
     );
   });
 
+  it("joins stations by ref beyond 150m and falls back to 150m proximity", () => {
+    const stations = [
+      { id: "FR:94100013", lat: 48.807, lon: 2.487 },
+      { id: "FR:94100014", lat: 48.82, lon: 2.487 },
+    ];
+    const nodes = [
+      // ~55 m from FR:94100013, but FR:94100013 should prefer its ref match ~250 m away.
+      { key: "node/close", lat: 48.8075, lon: 2.487, brand: "Shell" },
+      {
+        key: "node/ref",
+        lat: 48.80925,
+        lon: 2.487,
+        brand: "Total",
+        ref: "94100013",
+      },
+      // ~139 m from FR:94100014: matched under the 150 m default threshold.
+      { key: "node/140m", lat: 48.82125, lon: 2.487, brand: "BP" },
+    ];
+    const matches = joinStations(stations, nodes);
+    expect(matches).toHaveLength(2);
+    expect(matches.find((m) => m.station.id === "FR:94100013")).toMatchObject({
+      brand: "Total",
+      osmKey: "node/ref",
+    });
+    expect(matches.find((m) => m.station.id === "FR:94100014")).toMatchObject({
+      brand: "BP",
+      osmKey: "node/140m",
+    });
+  });
+
   it("builds versioned snapshot and manifest payloads", () => {
     const matches = [
       {

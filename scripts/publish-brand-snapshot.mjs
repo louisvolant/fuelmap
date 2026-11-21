@@ -43,7 +43,7 @@ const OSM_MIRRORS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 const VERSION = "v1";
-const MAX_DISTANCE_M = 120;
+const MAX_DISTANCE_M = 150;
 /** Overlap margin so stations near a tile border still find their OSM node. */
 const TILE_MARGIN = 0.02;
 
@@ -109,16 +109,53 @@ export function distanceMeters(aLonLat, bLonLat) {
 }
 
 /**
- * Greedy unique-assignment join: each official station gets its nearest OSM
- * node within range, each node brands at most one station. Mirrors
- * `enrichStationsWithBrands` (`src/lib/osmBrands.ts`).
+ * Two-pass unique-assignment join: first matches by exact official identifier
+ * (`ref:FR:prix-carburants`), then assigns each remaining official station its
+ * nearest OSM node within range, each node branding at most one station.
+ * Mirrors `enrichStationsWithBrands` (`src/lib/osmBrands.ts`).
  */
 export function joinStations(stations, nodes, maxDistanceM = MAX_DISTANCE_M) {
   const branded = nodes.filter((node) => Boolean(node.brand));
   const byId = new Map(stations.map((s) => [s.id, s]));
+  const used = new Set();
+  const done = new Set();
+  const matches = [];
+
+  // First pass: exact official ID matching via OpenStreetMap `ref` tag.
+  const refToNodeIndex = new Map();
+  for (let i = 0; i < branded.length; i += 1) {
+    const rawRef = branded[i].ref;
+    if (!rawRef) continue;
+    const normRef = String(rawRef).trim().replace(/^FR:/i, "");
+    if (!normRef) continue;
+    const fullRef = `FR:${normRef}`;
+    if (!refToNodeIndex.has(fullRef)) {
+      refToNodeIndex.set(fullRef, i);
+    }
+  }
+  for (const station of stations) {
+    const index = refToNodeIndex.get(station.id);
+    if (index === undefined || used.has(index) || done.has(station.id)) continue;
+    used.add(index);
+    done.add(station.id);
+    const distance = distanceMeters(
+      [station.lon, station.lat],
+      [branded[index].lon, branded[index].lat],
+    );
+    matches.push({
+      station: byId.get(station.id),
+      brand: branded[index].brand,
+      osmKey: branded[index].key,
+      distanceM: Math.round(distance * 10) / 10,
+    });
+  }
+
+  // Second pass: greedy distance matching within `maxDistanceM`.
   const pairs = [];
   for (const station of stations) {
+    if (done.has(station.id)) continue;
     for (let i = 0; i < branded.length; i += 1) {
+      if (used.has(i)) continue;
       const node = branded[i];
       const distance = distanceMeters(
         [station.lon, station.lat],
@@ -128,9 +165,6 @@ export function joinStations(stations, nodes, maxDistanceM = MAX_DISTANCE_M) {
     }
   }
   pairs.sort((a, b) => a.distance - b.distance);
-  const used = new Set();
-  const done = new Set();
-  const matches = [];
   for (const { station, index, distance } of pairs) {
     if (used.has(index) || done.has(station.id)) continue;
     used.add(index);
@@ -309,6 +343,9 @@ export async function queryOverpass(
                 lat,
                 lon,
                 brand: tags.brand ?? tags.operator ?? tags.name ?? null,
+                ...(tags["ref:FR:prix-carburants"]
+                  ? { ref: tags["ref:FR:prix-carburants"] }
+                  : {}),
               },
             ];
           });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { NormalizedStation } from "@/countries/types";
+import { distanceMeters } from "@/lib/geo";
 import {
   enrichStationsWithBrands,
   enrichStationsWithBrandsDetailed,
@@ -11,6 +12,7 @@ function station(
   lon: number,
   lat: number,
   brand?: string,
+  sourceId = id,
 ): NormalizedStation {
   return {
     id,
@@ -22,7 +24,7 @@ function station(
     fuels: [],
     services: [],
     automat24h: false,
-    sourceId: id,
+    sourceId,
   };
 }
 
@@ -31,8 +33,16 @@ function node(
   lon: number,
   lat: number,
   brand?: string,
+  ref?: string,
 ): OsmFuelStation {
-  return { key, lon, lat, brand, opening24h: false };
+  return {
+    key,
+    lon,
+    lat,
+    brand,
+    ...(ref ? { ref } : {}),
+    opening24h: false,
+  };
 }
 
 describe("enrichStationsWithBrands", () => {
@@ -91,5 +101,39 @@ describe("enrichStationsWithBrands", () => {
     });
     expect(assignments[0].distanceM).toBeGreaterThanOrEqual(0);
     expect(assignments[0].distanceM).toBeLessThanOrEqual(120);
+  });
+
+  it("matches by exact ref:FR:prix-carburants beyond 150m and before closer unrelated nodes", () => {
+    const stations = [station("FR:94100013", 2.487, 48.807, undefined, "94100013")];
+    // node/far is ~250 m away with matching ref; node/close is ~55 m away without ref.
+    const nodes = [
+      node("node/close", 2.487, 48.8075, "Shell"),
+      node("node/far", 2.487, 48.80925, "Total", "94100013"),
+    ];
+    expect(distanceMeters([2.487, 48.807], [2.487, 48.80925])).toBeGreaterThan(
+      150,
+    );
+
+    const { stations: enriched, assignments } =
+      enrichStationsWithBrandsDetailed(stations, nodes);
+    expect(enriched[0].brand).toBe("Total");
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0].osmKey).toBe("node/far");
+    expect(assignments[0].distanceM).toBeGreaterThan(150);
+  });
+
+  it("matches a station 140m away under the default 150m proximity threshold", () => {
+    const stations = [station("FR:94100014", 2.487, 48.807, undefined, "94100014")];
+    // ~139 m north of the station (past the old 120 m cutoff, within 150 m).
+    const nodes = [node("node/140m", 2.487, 48.80825, "BP")];
+    const d = distanceMeters([2.487, 48.807], [2.487, 48.80825]);
+    expect(d).toBeGreaterThan(120);
+    expect(d).toBeLessThanOrEqual(150);
+
+    const { stations: enriched, assignments } =
+      enrichStationsWithBrandsDetailed(stations, nodes);
+    expect(enriched[0].brand).toBe("BP");
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0].osmKey).toBe("node/140m");
   });
 });

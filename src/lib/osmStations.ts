@@ -7,6 +7,8 @@ export interface OsmFuelStation {
   lon: number;
   /** `brand`, `operator` or `name` from OpenStreetMap, when present. */
   brand?: string;
+  /** Official station identifier from OpenStreetMap (e.g. ref:FR:prix-carburants). */
+  ref?: string | null;
   city?: string;
   address?: string;
   postalCode?: string;

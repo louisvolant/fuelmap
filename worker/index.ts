@@ -627,6 +627,9 @@ async function handleOsmStations(
         lat: lat as number,
         lon: lon as number,
         brand: tags.brand ?? tags.operator ?? tags.name ?? null,
+        ...(tags["ref:FR:prix-carburants"]
+          ? { ref: tags["ref:FR:prix-carburants"] }
+          : {}),
         city:
           tags["addr:city"] ?? tags["addr:town"] ?? tags["addr:village"] ?? null,
         address: address || null,

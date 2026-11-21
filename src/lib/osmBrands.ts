@@ -8,18 +8,20 @@ function branded(nodes: OsmFuelStation[]): OsmFuelStation[] {
 }
 
 /**
- * Fill in the `brand` of stations that do not have one, using the nearest OSM
- * fuel station, with a **unique assignment**: each OSM station brands at most
- * one official station (greedy by increasing distance). This avoids branding
- * several official stations with the same node in dense areas.
+ * Fill in the `brand` of stations that do not have one, matching first by exact
+ * official identifier (`ref:FR:prix-carburants`) when present in OpenStreetMap,
+ * and otherwise using the nearest OSM fuel station within `maxDistanceMeters`,
+ * with a **unique assignment**: each OSM station brands at most one official
+ * station (greedy by increasing distance). This avoids branding several
+ * official stations with the same node in dense areas.
  *
  * `maxDistanceMeters` is intentionally generous: official and OSM coordinates
- * often differ by a hundred metres. Pure and side-effect free.
+ * often differ by more than a hundred metres. Pure and side-effect free.
  */
 export function enrichStationsWithBrands(
   stations: NormalizedStation[],
   nodes: OsmFuelStation[],
-  maxDistanceMeters = 120,
+  maxDistanceMeters = 150,
 ): NormalizedStation[] {
   return enrichStationsWithBrandsDetailed(stations, nodes, maxDistanceMeters)
     .stations;
@@ -42,13 +44,52 @@ export interface BrandAssignment {
 export function enrichStationsWithBrandsDetailed(
   stations: NormalizedStation[],
   nodes: OsmFuelStation[],
-  maxDistanceMeters = 120,
+  maxDistanceMeters = 150,
 ): { stations: NormalizedStation[]; assignments: BrandAssignment[] } {
   const candidates = branded(nodes);
   if (candidates.length === 0) return { stations, assignments: [] };
 
   const result = stations.map((station) => ({ ...station }));
+  const usedNodes = new Set<number>();
+  const brandedStations = new Set<string>();
+  const assignments: BrandAssignment[] = [];
 
+  // First pass: exact official ID matching via OpenStreetMap `ref` tag.
+  const refToNodeIndex = new Map<string, number>();
+  candidates.forEach((node, index) => {
+    if (!node.ref) return;
+    const normRef = node.ref.trim().replace(/^FR:/i, "");
+    if (normRef && !refToNodeIndex.has(normRef)) {
+      refToNodeIndex.set(normRef, index);
+    }
+  });
+
+  if (refToNodeIndex.size > 0) {
+    for (const station of result) {
+      if (station.brand) continue;
+      const stationRef = (station.sourceId || station.id)
+        .trim()
+        .replace(/^FR:/i, "");
+      if (!stationRef) continue;
+      const index = refToNodeIndex.get(stationRef);
+      if (index === undefined || usedNodes.has(index)) continue;
+
+      station.brand = candidates[index].brand;
+      usedNodes.add(index);
+      brandedStations.add(station.id);
+      const distance = distanceMeters(
+        [station.lon, station.lat],
+        [candidates[index].lon, candidates[index].lat],
+      );
+      assignments.push({
+        stationId: station.id,
+        osmKey: candidates[index].key,
+        distanceM: distance,
+      });
+    }
+  }
+
+  // Second pass: greedy distance matching within `maxDistanceMeters`.
   // Cheap bounding-box prefilter: avoids a trigonometric distance computation
   // for the vast majority of (station, node) pairs.
   const latWindow = maxDistanceMeters / 110_000;
@@ -58,8 +99,9 @@ export function enrichStationsWithBrandsDetailed(
   const pairs: { station: NormalizedStation; index: number; distance: number }[] =
     [];
   for (const station of result) {
-    if (station.brand) continue;
+    if (station.brand || brandedStations.has(station.id)) continue;
     candidates.forEach((node, index) => {
+      if (usedNodes.has(index)) return;
       if (Math.abs(node.lat - station.lat) > latWindow) return;
       if (Math.abs(node.lon - station.lon) > lonWindow) return;
       const distance = distanceMeters(
@@ -74,9 +116,6 @@ export function enrichStationsWithBrandsDetailed(
 
   pairs.sort((a, b) => a.distance - b.distance);
 
-  const usedNodes = new Set<number>();
-  const brandedStations = new Set<string>();
-  const assignments: BrandAssignment[] = [];
   for (const { station, index, distance } of pairs) {
     if (usedNodes.has(index) || brandedStations.has(station.id)) continue;
     station.brand = candidates[index].brand;

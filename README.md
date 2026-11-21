@@ -107,9 +107,11 @@ French government fuel-price open data.
   fields are integers ×100 000 — FuelMap only trusts the `geom` field.
 - **Brands are derived from OpenStreetMap**: fuel stations (`amenity=fuel`) are
   fetched for the current viewport (from zoom 11) **through the Worker** — the
-  public Overpass API rate-limits direct browser use — and matched to the nearest
-  official station within 120 m, with a **unique assignment** (each OSM station
-  brands at most one official station). Results are cached for a week, both at
+  public Overpass API rate-limits direct browser use — and matched first by
+  their exact `ref:FR:prix-carburants` tag when present in OpenStreetMap, and
+  otherwise to the nearest official station within 150 m (was 120 m), with a
+  **unique assignment** (each OSM station brands at most one official
+  station). Results are cached for a week, both at
   the edge and in IndexedDB. Resolved brands are also kept in a **persistent
   90-day overlay** (`brandResolutions` in IndexedDB, keyed by station id), so
   logos render instantly on revisit without waiting for a fresh OSM match, and
