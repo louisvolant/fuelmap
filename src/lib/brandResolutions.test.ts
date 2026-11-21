@@ -4,6 +4,7 @@ import {
   BRAND_RESOLVER_VERSION,
   collectNewResolutions,
   isResolutionFresh,
+  quantizeBounds,
   stableBboxKey,
   type BrandResolution,
 } from "@/lib/brandResolutions";
@@ -82,6 +83,15 @@ describe("brandResolutions", () => {
     expect(nudged).toBe(first);
     const far = stableBboxKey([3.0, 48.851, 3.1, 48.949]);
     expect(far).not.toBe(first);
+  });
+
+  it("quantizes bounds outward to the 0.05-degree grid without shrinking inward", () => {
+    expect(quantizeBounds([2.476, 48.796, 2.526, 48.824])).toEqual([
+      2.45, 48.75, 2.55, 48.85,
+    ]);
+    expect(quantizeBounds([2.351, 48.851, 2.449, 48.949])).toEqual([
+      2.35, 48.85, 2.45, 48.95,
+    ]);
   });
 
   it("round-trips enriched brands through persistence", () => {

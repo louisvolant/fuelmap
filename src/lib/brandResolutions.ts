@@ -52,8 +52,31 @@ export function isResolutionFresh(
   );
 }
 
-function quantize(value: number, step = STABLE_BBOX_STEP): number {
-  return Math.round(value / step) * step;
+function snapDown(value: number, step: number): number {
+  return Number((Math.floor(Number((value / step).toFixed(6))) * step).toFixed(4));
+}
+
+function snapUp(value: number, step: number): number {
+  return Number((Math.ceil(Number((value / step).toFixed(6))) * step).toFixed(4));
+}
+
+/**
+ * Snap a bounding box outward to the `step` grid (`west`/`south` down,
+ * `east`/`north` up) so the quantized box always covers the full viewport
+ * and every micro-pan within the same grid cell requests the exact same
+ * canonical coordinates from the Worker.
+ */
+export function quantizeBounds(
+  bounds: BoundingBox,
+  step = STABLE_BBOX_STEP,
+): BoundingBox {
+  const [west, south, east, north] = bounds;
+  return [
+    snapDown(west, step),
+    snapDown(south, step),
+    snapUp(east, step),
+    snapUp(north, step),
+  ];
 }
 
 /**
@@ -64,7 +87,9 @@ export function stableBboxKey(
   bounds: BoundingBox,
   step = STABLE_BBOX_STEP,
 ): string {
-  return bounds.map((value) => quantize(value, step).toFixed(2)).join(",");
+  return quantizeBounds(bounds, step)
+    .map((value) => value.toFixed(2))
+    .join(",");
 }
 
 /**

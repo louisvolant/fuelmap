@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { BoundingBox, CountryCode } from "@/countries/types";
 import { getMeta, setMeta } from "@/lib/db/indexedDb";
-import { stableBboxKey } from "@/lib/brandResolutions";
+import { quantizeBounds, stableBboxKey } from "@/lib/brandResolutions";
 import { fetchOsmStations, type OsmFuelStation } from "@/lib/osmStations";
 import { useOsmStationsStore } from "@/stores/osmStationsStore";
 
@@ -36,13 +36,14 @@ export function useOsmStations(
   country: CountryCode,
   bounds: BoundingBox | null,
 ) {
-  const key = bounds ? osmBboxKey(bounds) : null;
+  const quantized = bounds ? quantizeBounds(bounds) : null;
+  const key = quantized ? osmBboxKey(quantized) : null;
   const merge = useOsmStationsStore((state) => state.merge);
   const accumulated = useOsmStationsStore((state) => state.stations);
 
   const query = useQuery<OsmFuelStation[]>({
     queryKey: ["osm-stations", key],
-    enabled: country === "FR" && bounds !== null,
+    enabled: country === "FR" && quantized !== null,
     staleTime: CACHE_TTL_MS,
     refetchOnWindowFocus: false,
     // One attempt only: the Worker bounds each mirror at 9 s, so a retry would
@@ -50,12 +51,12 @@ export function useOsmStations(
     // tile falls back to the brand overlay and is refetched on the next visit.
     retry: false,
     queryFn: async () => {
-      if (!bounds) return [];
+      if (!quantized) return [];
       const metaKey = `osmStations:${OSM_CACHE_VERSION}:${key}`;
       const cached = await getMeta<CachedOsmStations>(metaKey);
       if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.stations;
 
-      const stations = await fetchOsmStations(bounds);
+      const stations = await fetchOsmStations(quantized);
       await setMeta(metaKey, { at: Date.now(), stations });
       return stations;
     },

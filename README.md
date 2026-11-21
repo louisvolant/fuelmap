@@ -115,8 +115,12 @@ French government fuel-price open data.
   the edge and in IndexedDB. Resolved brands are also kept in a **persistent
   90-day overlay** (`brandResolutions` in IndexedDB, keyed by station id), so
   logos render instantly on revisit without waiting for a fresh OSM match, and
-  small pans reuse the same OSM entry through a quantized tile key (also used
-  for area-based station queries, so Germany stops refetching on micro-pans).
+  small pans reuse the same OSM entry through a quantized tile key that snaps
+  the viewport bounding box outward to a `0.05°` grid and sends those exact
+  snapped bounds to the Worker, so cached tiles always cover the full viewport
+  and hit the same Worker edge cache and R2 fallback entry (the quantized key is
+  also used for area-based station queries, so Germany stops refetching on
+  micro-pans).
   Every match records its provenance (`osmKey`, `distanceM`) in the overlay.
   A **precomputed snapshot** (`GET /api/fr/brands/manifest` + `GET
   /api/fr/brands/snapshot`, served from R2 and edge-cached for an hour) covers
